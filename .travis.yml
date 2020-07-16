@@ -9,12 +9,6 @@ compiler:
 
 before_script:
   - git submodule update --init --recursive
-
-  # print out some version numbers
-  - $CMAKE_CXX --version
-  - cmake --version
-
-  # configure
   - mkdir build
   - cd build
   - cmake ..
