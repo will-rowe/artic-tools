@@ -1,0 +1,17 @@
+#ifndef VERSION_H
+#define VERSION_H
+
+#define VERSION_MAJOR @ARTIC_VERSION_MAJOR@
+#define VERSION_MINOR @ARTIC_VERSION_MINOR@
+#define VERSION_PATCH @ARTIC_VERSION_PATCH@
+
+#include <string>
+
+const std::string PROG_NAME = "@ARTIC_PROG_NAME@";
+
+namespace artic
+{
+    std::string GetVersion();
+}; // namespace artic
+
+#endif
