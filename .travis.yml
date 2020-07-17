@@ -9,6 +9,9 @@ compiler:
 
 before_script:
   - git submodule update --init --recursive
+  - pushd extlib/htslib
+  - autoheader && autoconf && make && make install
+  - popd
   - mkdir build
   - cd build
   - cmake ..
