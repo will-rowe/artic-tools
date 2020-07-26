@@ -52,6 +52,6 @@ namespace artic
         unsigned int _ptrimCounter;                                     // number of records that were trimmed within amplicon primer sequences (either forward or reverse)
     };
 
-}; // namespace artic
+} // namespace artic
 
 #endif

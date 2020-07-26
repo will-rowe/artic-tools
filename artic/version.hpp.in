@@ -12,6 +12,6 @@ const std::string PROG_NAME = "@ARTIC_PROG_NAME@";
 namespace artic
 {
     std::string GetVersion();
-}; // namespace artic
+} // namespace artic
 
 #endif

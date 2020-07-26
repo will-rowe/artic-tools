@@ -142,6 +142,6 @@ namespace artic
         std::vector<std::pair<unsigned int, std::string>> _rPrimerLocations; // the end position and primerID of each reverse primer in the scheme
         std::vector<std::string> _primerPools;                               // the primer pools found in the primer scheme
     };
-}; // namespace artic
+} // namespace artic
 
 #endif

@@ -25,6 +25,6 @@ namespace artic
         uint32_t* cigar;
     };
 
-}; // namespace artic
+} // namespace artic
 
 #endif
