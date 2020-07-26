@@ -2,18 +2,13 @@ language: cpp
 sudo: true
 dist: bionic
 
-compiler: gcc
-os: linux
-addons:
-  apt:
-    sources:
-      - ubuntu-toolchain-r-test
-    packages:
-      - g++-7
+matrix:
+  include:
+    - os: osx
+      osx_image: xcode10.1
+    - os: linux
 
 before_script:
-  - export CC=gcc-7
-  - export CXX=g++-7
   - git submodule update --init --recursive
   - pushd extlib/htslib
   - autoheader && autoconf && sudo make && sudo make install
