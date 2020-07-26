@@ -14,42 +14,6 @@ const unsigned int numAmplicons = 98;
 
 const std::string inputScheme = std::string(TEST_DATA_PATH) + "SCoV2.scheme.v3.bed";
 
-TEST(primerscheme, travisSeg)
-{
-
-    std::cerr << inputScheme << std::endl;
-
-    // catch no file
-    try
-    {
-        artic::PrimerScheme("", version);
-        FAIL() << "expected a no file error";
-    }
-    catch (std::runtime_error& err)
-    {
-        EXPECT_EQ(err.what(), std::string("primer scheme input file required"));
-    }
-    catch (...)
-    {
-        FAIL() << "expected std::runtime_error";
-    }
-}
-
-#include <fstream>
-#include <iostream>
-
-TEST(primerscheme, travisSeg2)
-{
-
-    std::string txt;
-    std::ifstream testFile(inputScheme);
-    while (getline(testFile, txt))
-    {
-        std::cout << txt;
-    }
-    testFile.close();
-}
-
 // scheme constructor
 TEST(primerscheme, constructor)
 {

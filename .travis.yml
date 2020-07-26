@@ -1,22 +1,28 @@
 language: cpp
-
 sudo: true
 dist: bionic
 
-compiler:
-  - clang
-  - gcc
+compiler: gcc
+os: linux
+addons:
+  apt:
+    sources:
+      - ubuntu-toolchain-r-test
+    packages:
+      - g++-7
 
 before_script:
+  - export CC=gcc-7
+  - export CXX=g++-7
   - git submodule update --init --recursive
   - pushd extlib/htslib
   - autoheader && autoconf && sudo make && sudo make install
   - popd
+
+script:
   - mkdir build
   - cd build
   - cmake ..
-
-script:
   - make -j2
   - ../bin/artic_tests
   - ../bin/artic_tools -v
