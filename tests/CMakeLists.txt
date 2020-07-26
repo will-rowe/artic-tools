@@ -5,16 +5,18 @@ file(
   "${PROJECT_SOURCE_DIR}/tests/*.[ch]pp"
 )
 
-add_executable(${PROJECT_NAME}_tests ${TEST_FILES})
+add_executable(artic_tests ${TEST_FILES})
+
 target_link_libraries(
-  ${PROJECT_NAME}_tests 
+  artic_tests 
   artic_static 
   gtest 
   gtest_main
 )
 target_compile_definitions(
-  ${PROJECT_NAME}_tests 
+  artic_tests 
   PRIVATE 
   TEST_DATA_PATH="${PROJECT_SOURCE_DIR}/tests/data/"
 )
-gtest_add_tests(${PROJECT_NAME}_tests "" ${TEST_FILES})
+
+gtest_add_tests(artic_tests "" ${TEST_FILES})

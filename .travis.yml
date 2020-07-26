@@ -17,5 +17,6 @@ before_script:
   - cmake ..
 
 script:
-  - make -j2 && ctest -VV
+  - make -j2
+  - ../bin/artic_tests
   - ../bin/artic_tools -v
