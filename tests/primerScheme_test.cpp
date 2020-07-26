@@ -12,7 +12,7 @@ const unsigned int numPrimers = 218;
 const unsigned int numAlts = 22;
 const unsigned int numAmplicons = 98;
 
-std::string inputScheme = TEST_DATA_PATH + "SCoV2.scheme.v3.bed";
+const std::string inputScheme = std::string(TEST_DATA_PATH) + "SCoV2.scheme.v3.bed";
 
 // scheme constructor
 TEST(primerscheme, constructor)
