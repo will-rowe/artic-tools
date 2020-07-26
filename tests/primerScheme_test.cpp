@@ -12,27 +12,7 @@ const unsigned int numPrimers = 218;
 const unsigned int numAlts = 22;
 const unsigned int numAmplicons = 98;
 
-std::string inputScheme = "data/SCoV2.scheme.v3.bed";
-
-// scheme constructor
-TEST(primerscheme, travisSeg)
-{
-
-    // catch no file
-    try
-    {
-        artic::PrimerScheme("", version);
-        FAIL() << "expected a no file error";
-    }
-    catch (std::runtime_error& err)
-    {
-        EXPECT_EQ(err.what(), std::string("primer scheme input file required"));
-    }
-    catch (...)
-    {
-        FAIL() << "expected std::runtime_error";
-    }
-}
+std::string inputScheme = TEST_DATA_PATH + "SCoV2.scheme.v3.bed";
 
 // scheme constructor
 TEST(primerscheme, constructor)

@@ -2,11 +2,19 @@ file(COPY data DESTINATION .)
 
 file(
   GLOB_RECURSE TEST_FILES
-  RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
-  ${CMAKE_CURRENT_SOURCE_DIR}/*.[ch]pp
+  "${PROJECT_SOURCE_DIR}/tests/*.[ch]pp"
 )
 
-add_executable(artic_tests ${TEST_FILES})
-target_compile_definitions(artic_tests PRIVATE artic_test)
-target_link_libraries(artic_tests artic_static gtest gtest_main)
-gtest_add_tests(artic_tests "" ${TEST_FILES})
+add_executable(${PROJECT_NAME}_tests ${TEST_FILES})
+target_link_libraries(
+  ${PROJECT_NAME}_tests 
+  artic_static 
+  gtest 
+  gtest_main
+)
+target_compile_definitions(
+  ${PROJECT_NAME}_tests 
+  PRIVATE 
+  TEST_DATA_PATH="${PROJECT_SOURCE_DIR}/tests/data/"
+)
+gtest_add_tests(${PROJECT_NAME}_tests "" ${TEST_FILES})
