@@ -166,25 +166,25 @@ artic::PrimerScheme::PrimerScheme(const std::string inputFile, unsigned int sche
     _numAlts = 0;
     _primerPools.emplace_back(Unmatched_Pool);
 
-    // check the input file provided
-    if (inputFile.empty())
-    {
-        throw std::runtime_error("primer scheme input file required");
-    }
-    std::ifstream ifile;
-    ifile.open(inputFile);
-    if (!ifile)
-    {
-        throw std::runtime_error("primer scheme file does not exist");
-    }
-
     // check the version provided
     if (_version < 1 || _version > 3)
     {
         throw std::runtime_error("unrecognised primer scheme version: " + std::to_string(_version));
     }
 
+    // check the input file provided
+    if (inputFile.empty())
+    {
+        throw std::runtime_error("primer scheme input file required");
+    }
+
     // load the primer scheme input file and check for the expected number of rows
+    std::ifstream ifile;
+    ifile.open(inputFile);
+    if (!ifile)
+    {
+        throw std::runtime_error("primer scheme file does not exist");
+    }
     rapidcsv::Document scheme(inputFile, rapidcsv::LabelParams(-1, -1), rapidcsv::SeparatorParams('\t'));
     if (scheme.GetColumnCount() < 5)
     {
@@ -270,13 +270,11 @@ artic::PrimerScheme::~PrimerScheme(void)
     {
         delete (i->second);
         i->second = nullptr;
-        _fPrimers.erase(i);
     }
     for (schemeMap::iterator j = _rPrimers.begin(); j != _rPrimers.end(); ++j)
     {
         delete (j->second);
         j->second = nullptr;
-        _rPrimers.erase(j);
     }
 }
 
