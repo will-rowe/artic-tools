@@ -15,7 +15,8 @@ jobs:
               key_url: "https://apt.llvm.org/llvm-snapshot.gpg.key"
           packages:
             - clang-10
-      env: MATRIX_EVAL="CC=clang-10 && CXX=clang++-10"
+      env: ["CXX=clang++-10", "CC=clang-10"]
+
     - os: linux
       name: "linux-g++10"
       addons:
@@ -27,20 +28,12 @@ jobs:
               key_url: "https://apt.llvm.org/llvm-snapshot.gpg.key"
           packages:
             - g++-10
-      env: MATRIX_EVAL="CC=gcc-10 && CXX=g++-10"
+      env: ["CXX=g++-10", "CC=gcc-10"]
+
     - os: osx
       name: "osx"
-      osx_image: xcode11.4
-      env: MATRIX_EVAL="CC=clang && CXX=clang++"
-
-before_install:
-  - eval "${MATRIX_EVAL}"
-  - g++ --version
-  - |
-    if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then
-      export TRAVIS_OS=Linux
-    elif [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
-      export TRAVIS_OS=Darwin
+      osx_image: xcode11.3
+      env: ["CXX=clang++", "XCODE_VERSION=11.3.1"]
 
 install:
   # get the submodules
@@ -52,6 +45,7 @@ install:
   - popd
 
 script:
+  - g++ --version
   - mkdir build
   - cd build
   - cmake ..
