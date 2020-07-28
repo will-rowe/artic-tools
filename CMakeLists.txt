@@ -100,7 +100,6 @@ include_directories(${PROJECT_SOURCE_DIR}/extlib/rapidcsv/src)
 # google test
 if(BUILD_TESTING)
     add_subdirectory(extlib/googletest)
-    enable_testing()
     include(GoogleTest)
 endif(BUILD_TESTING)
 
