@@ -50,7 +50,7 @@ script:
   - g++ --version
   - mkdir build
   - cd build
-  - cmake ..
+  - cmake -Dgtest_disable_pthreads=OFF ..
   - make -j2
   - ../bin/artic_tests
   - ../bin/artic_tools -v
