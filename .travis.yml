@@ -1,12 +1,42 @@
 language: cpp
-sudo: true
-dist: bionic
+sudo: required
 
-matrix:
+jobs:
   include:
-    - os: osx
-      osx_image: xcode10.1
     - os: linux
+      dist: bionic
+      env: ["CXX=g++-10", "PACKAGES=g++-10"]
+    - os: linux
+      dist: bionic
+      env: ["CXX=g++-9", "PACKAGES=g++-9"]
+    - os: linux
+      dist: bionic
+      env:
+        ["CXX=clang-10", "PACKAGES=clang-10", "LLVM_OS=bionic", "LLVM_VER=10"]
+    - os: linux
+      dist: bionic
+      env: ["CXX=clang-9", "PACKAGES=clang-9", "LLVM_OS=bionic", "LLVM_VER=9"]
+    - os: osx
+      osx_image: xcode11.3
+      env: ["CXX=clang++", "XCODE_VERSION=11.3.1"]
+    - os: osx
+      osx_image: xcode9.4
+      env: ["CXX=clang++", "XCODE_VERSION=9.4.1"]
+    - os: osx
+      osx_image: xcode8.3
+      env: ["CXX=clang++", "XCODE_VERSION=8.3.3"]
+
+install:
+  - |
+    set -e
+    uname -a
+    if [ "$TRAVIS_OS_NAME" = "linux" ]; then
+      ./tests/install-cxx.sh
+    else
+      export "XCODE_INSTALL_USER=${DEV_APPLE_USER}"
+      export "XCODE_INSTALL_PASSWORD=${DEV_APPLE_PASSWORD}"
+      ./tests/install-xcode.sh
+    fi
 
 before_script:
   - git submodule update --init --recursive
@@ -15,6 +45,8 @@ before_script:
   - popd
 
 script:
+  - set -e
+  - ${CXX} --version
   - mkdir build
   - cd build
   - cmake ..
