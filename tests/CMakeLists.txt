@@ -12,6 +12,7 @@ target_link_libraries(
   artic_static 
   gtest 
   gtest_main
+  pthread
 )
 target_compile_definitions(
   artic_tests 
