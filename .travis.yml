@@ -1,32 +1,48 @@
 sudo: required
 language: cpp
-os: linux
 dist: bionic
 
-compiler:
-  - gcc
-  - clang
+jobs:
+  include:
+    - os: linux
+      name: "linux-clang10"
+      addons:
+        apt:
+          update: true
+          sources:
+            - ubuntu-toolchain-r-test
+            - sourceline: "deb https://apt.llvm.org/xenial/ llvm-toolchain-xenial-10 main"
+              key_url: "https://apt.llvm.org/llvm-snapshot.gpg.key"
+          packages:
+            - clang-10
+      env: MATRIX_EVAL="CC=clang-10 && CXX=clang++-10"
+    - os: linux
+      name: "linux-g++10"
+      addons:
+        apt:
+          update: true
+          sources:
+            - ubuntu-toolchain-r-test
+            - sourceline: "deb https://apt.llvm.org/xenial/ llvm-toolchain-xenial-10 main"
+              key_url: "https://apt.llvm.org/llvm-snapshot.gpg.key"
+          packages:
+            - g++-10
+      env: MATRIX_EVAL="CC=gcc-10 && CXX=g++-10"
+    - os: osx
+      name: "osx"
+      osx_image: xcode11.4
+      env: MATRIX_EVAL="CC=clang && CXX=clang++"
 
-addons:
-  apt:
-    update: true
-    sources:
-      - sourceline: "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-10 main"
-        key_url: "https://apt.llvm.org/llvm-snapshot.gpg.key"
-      - sourceline: "ppa:ubuntu-toolchain-r/test"
-    packages:
-      - clang-10
-      - gcc-10
-      - g++-10
+before_install:
+  - eval "${MATRIX_EVAL}"
+  - g++ --version
+  - |
+    if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then
+      export TRAVIS_OS=Linux
+    elif [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
+      export TRAVIS_OS=Darwin
 
 install:
-  # /usr/bin/gcc points to an older compiler on Linux
-  - if [ "$CXX" = "g++" ]; then export CXX="g++-10" CC="gcc-10"; fi
-  - if [ "$CXX" = "clang++" ]; then export CXX="clang++-10" CC="clang-10"; fi
-  - echo ${CC}
-  - echo ${CXX}
-  - ${CXX} --version
-
   # get the submodules
   - git submodule update --init --recursive
 
