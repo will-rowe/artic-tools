@@ -8,11 +8,10 @@ file(
 add_executable(artic_tests ${TEST_FILES})
 
 target_link_libraries(
-  artic_tests 
+  artic_tests
+  PRIVATE
   artic_static 
   gtest 
-  gtest_main
-  pthread
 )
 target_compile_definitions(
   artic_tests 
