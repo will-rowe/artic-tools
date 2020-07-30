@@ -1,5 +1,7 @@
 # ARTIC tools
 
+[![Build Status](https://travis-ci.org/will-rowe/artic_tools.svg?branch=master)](https://travis-ci.org/will-rowe/artic_tools)
+
 Work in progress...
 
 This is/will be a set of tools to use in the ARTIC pipeline.

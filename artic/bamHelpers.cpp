@@ -10,8 +10,28 @@
 #define kroundup32(x) (--(x), (x) |= (x) >> 1, (x) |= (x) >> 2, (x) |= (x) >> 4, (x) |= (x) >> 8, (x) |= (x) >> 16, ++(x))
 #endif
 
-// replaceCIGAR will replace a record's current CIGAR with a new one.
-void replaceCIGAR(bam1_t* record, uint32_t* cigar, uint32_t length)
+// vector2cigar will convert a vectorised CIGAR back to a htslib compatible one.
+uint32_t* vector2cigar(std::vector<uint32_t>* cigarVector, uint32_t cigarLen)
+{
+    uint32_t* newCigar_ptr = (uint32_t*)malloc(sizeof(uint32_t) * cigarLen);
+    uint32_t* newCigar = newCigar_ptr;
+    for (auto it = cigarVector->begin(); it != cigarVector->end(); ++it)
+    {
+        // collect both the CIGAR operation and its length from successive vector slots
+        uint32_t cigOp = *it;
+        ++it;
+        uint32_t cigLen = *it;
+
+        // pack both the operation and length into a single uint32
+        cigLen = cigLen << BAM_CIGAR_SHIFT;
+        *newCigar_ptr = (cigOp | cigLen);
+        newCigar_ptr++;
+    }
+    return newCigar;
+}
+
+// replaceCigar will replace a records current CIGAR with a new one.
+void replaceCigar(bam1_t* record, uint32_t* cigar, uint32_t length)
 {
     // if the length of the new matches the old, we don't need to mess with memory re-allocations
     if (length == record->core.n_cigar)
@@ -38,10 +58,10 @@ void replaceCIGAR(bam1_t* record, uint32_t* cigar, uint32_t length)
     record->core.n_cigar = length;
 }
 
-// reverseCIGAR reverses a CIGAR.
+// reverseCigar reverses a CIGAR.
 // use XOR to swap bits without using an intermediate variable
 // see: https://www.geeksforgeeks.org/swap-two-numbers-without-using-temporary-variable/
-void reverseCIGAR(uint32_t* cigar, int length)
+void reverseCigar(uint32_t* cigar, int length)
 {
     for (int i = 0; i < length / 2; ++i)
     {
@@ -51,158 +71,159 @@ void reverseCIGAR(uint32_t* cigar, int length)
     }
 }
 
-// findQueryStart uses the CIGAR to find the mask end relative to the query sequence (instead of the ref sequence).
-int32_t findQueryStart(uint32_t* cigar, uint32_t cigarLength, int32_t maskEnd, int32_t refStart)
+// primerTrim will perform the softmasking and return a new CIGAR (the caller must replace the existing CIGAR).
+// this function essentially mirrors the python `trim(segment, primer_pos, end, debug)` func from align_trim.
+void primerTrim(std::vector<uint32_t>* cigar, bam1_t* record, uint32_t maskEnd, bool reverseMask)
 {
-    // set holders for the CIGAR operation and its length
-    int cigOp;
-    int32_t opLen;
 
-    // set chomp counters for query and reference sequences
-    int32_t qChomper = 0;
-    int32_t rChomper = refStart;
-
-    // iterate through the CIGAR and use bam_cigar_type to determine if reference or query consuming
-    // see: https://github.com/samtools/htslib/blob/29d06c2f84dc20fbc5f94ca1b181292433b69a21/htslib/sam.h#L122
-    for (uint32_t i = 0; i < cigarLength; ++i)
+    // get the segment position in the reference (depends on if start or end of the segment is being processed)
+    uint32_t pos;
+    if (!reverseMask)
     {
-        cigOp = bam_cigar_op(cigar[i]);
-        opLen = bam_cigar_oplen(cigar[i]);
+        pos = record->core.pos;
 
-        // process reference consuming operation
-        if (bam_cigar_type(cigOp) & 2)
+        // if forward primer, use the start of the record and flip the CIGAR for easy appending
+        std::reverse(cigar->begin(), cigar->end());
+    }
+    else
+    {
+        pos = bam_endpos(record);
+    }
+
+    // process the CIGAR to determine how much softmasking is required
+    uint32_t eaten = 0;
+    while (1)
+    {
+        uint32_t cigarOp;
+        uint32_t cigarLen;
+
+        // chomp CIGAR operations from the start/end of the CIGAR
+        if (cigar->size() >= 2)
         {
-
-            // if teh reference has been chomped enough, we're ready to return the current query position
-            if (maskEnd <= rChomper + opLen)
+            if (reverseMask)
             {
-
-                // if query consumed too, increment the query chomper before returning it
-                if (bam_cigar_type(cigOp) & 1)
-                    qChomper += (maskEnd - rChomper);
-                return qChomper;
+                cigarLen = cigar->back();
+                cigar->pop_back();
+                cigarOp = cigar->back();
+                cigar->pop_back();
             }
-            rChomper += opLen;
+            else
+            {
+                cigarOp = cigar->back();
+                cigar->pop_back();
+                cigarLen = cigar->back();
+                cigar->pop_back();
+            }
+        }
+        else
+        {
+            // ran out of cigar during soft masking - completely masked read will be ignored
+            break;
         }
 
-        // otherwise we have a query consumer so chomp some more of the query
-        if (bam_cigar_type(cigOp) & 1)
-            qChomper += opLen;
+        // if the CIGAR operation consumes the reference sequence, increment/decrement the position by the CIGAR operation length
+        if (bam_cigar_type(cigarOp) & 2)
+        {
+            (!reverseMask) ? pos += cigarLen : pos -= cigarLen;
+        }
+
+        // if the CIGAR operation consumes the query sequence, increment the number of CIGAR operations eaten by the CIGAR operation length
+        if (bam_cigar_type(cigarOp) & 1)
+            eaten += cigarLen;
+
+        // stop processing the CIGAR if we've gone far enough to mask the primer
+        if (!reverseMask && (pos >= maskEnd) && (cigarOp == BAM_CMATCH))
+            break;
+        if (reverseMask && (pos <= maskEnd) && (cigarOp == BAM_CMATCH))
+            break;
     }
-    return qChomper;
+
+    // calculate how many extra matches are needed in the CIGAR
+    uint32_t extra = (pos > maskEnd) ? pos - maskEnd : maskEnd - pos;
+    if (extra)
+    {
+        if (reverseMask)
+        {
+            cigar->push_back(0);
+            cigar->push_back(extra);
+        }
+        else
+        {
+            cigar->push_back(extra);
+            cigar->push_back(0);
+        }
+        eaten -= extra;
+    }
+
+    // check we have smomething to softclip
+    if (eaten <= 0)
+        throw std::runtime_error("invalid cigar operation created - possibly due to INDEL in primer");
+
+    // softmask the reverse/forward primer
+    if (reverseMask)
+    {
+        cigar->push_back(BAM_CSOFT_CLIP);
+        cigar->push_back(eaten);
+    }
+    else
+    {
+        // update the position of the leftmost mappinng base
+        record->core.pos = pos - extra;
+
+        // if proposed softmask leads straight into a deletion, shuffle leftmost mapping base along and ignore the deletion
+        if (cigar->back() == BAM_CDEL)
+        {
+            while (1)
+            {
+
+                if (cigar->back() != BAM_CDEL)
+                    break;
+
+                // remove the deletion operation, add its length to the record start pos and then remove the length from the CIGAR as well
+                cigar->pop_back();
+                record->core.pos += cigar->back();
+                cigar->pop_back();
+            }
+        }
+
+        // add the soft clip
+        cigar->push_back(eaten);
+        cigar->push_back(BAM_CSOFT_CLIP);
+    }
+
+    // if we flipped the CIGAR at the start, flip it again
+    if (!reverseMask)
+        std::reverse(cigar->begin(), cigar->end());
+
+    // check the the start/end operation of CIGAR has valid length
+    if (cigar->at(2) <= 0 || cigar->end()[-2] <= 0)
+        throw std::runtime_error("invalid cigar operation created - possibly due to INDEL in primer");
 }
 
-// primerTrim will perform the softmasking and return a new CIGAR (the caller must replace the existing CIGAR).
-// TODO: will make this mirror the python `trim(segment, primer_pos, end, debug)` func from align_trim, just playing with variations for now.
-artic::cigarHolder primerTrim(bam1_t* record, int32_t maskEnd, bool reverseMask)
+// TrimAlignment will softmask an alignment from its start/end up to the provided position.
+void artic::TrimAlignment(bam1_t* record, unsigned int maskEnd, bool reverse)
 {
 
-    // get the current CIGAR and set up a holder for the new one (add an extra slot as CIGAR can could grow by 1 op type)
-    uint32_t* cigar = bam_get_cigar(record);
-    uint32_t* newCigar = (uint32_t*)malloc(sizeof(uint32_t) * (record->core.n_cigar + 1));
-
-    // calc the max mask length possible
-    int maxMaskLength = 0;
-    (reverseMask) ? maxMaskLength = bam_cigar2qlen(record->core.n_cigar, bam_get_cigar(record)) - findQueryStart(cigar, record->core.n_cigar, maskEnd, record->core.pos) - 1
-                  : maxMaskLength = findQueryStart(cigar, record->core.n_cigar, maskEnd, record->core.pos);
-
-    // shouldn't happen, but allow for record only spanning primer region
-    maxMaskLength = (maxMaskLength > 0) ? maxMaskLength : 0;
-
-    // if we're masking the reverse, flip the CIGAR to make things easier
-    reverseCIGAR(cigar, record->core.n_cigar);
-
-    // set start position and reference trackers
-    bool startPosReached = false;
-    int32_t startPos = 0;
-    int32_t refIncrement = 0;
-
-    // set holders for the CIGAR operation and its length
-    int cigOp;
-    int32_t opLen;
-
-    // set up two iterators for swapping between CIGARS
-    uint32_t i = 0, j = 0;
-
-    // process the CIGAR operations
-    while (i < record->core.n_cigar)
+    // copy the CIGAR to a vector
+    uint32_t* origCigar = bam_get_cigar(record);
+    std::vector<uint32_t> cigarVector;
+    for (uint32_t i = 0; i < record->core.n_cigar; i++)
     {
-
-        // query bases have been masked, transfer over the CIGAR op and continue
-        if (maxMaskLength == 0 && startPosReached)
-        {
-            newCigar[j] = cigar[i];
-            i++;
-            j++;
-            continue;
-        }
-
-        // grab the op
-        cigOp = bam_cigar_op(cigar[i]);
-        opLen = bam_cigar_oplen(cigar[i]);
-
-        // once masking is done, wait until we increment the startPos so it consumes both query and ref
-        if (maxMaskLength == 0 && (bam_cigar_type(cigOp) & 1) && (bam_cigar_type(cigOp) & 2))
-        {
-            startPosReached = true;
-            continue;
-        }
-        refIncrement = opLen;
-
-        // consume query sequence
-        if ((bam_cigar_type(cigOp) & 1))
-        {
-
-            // add the soft mask
-            if (maxMaskLength >= opLen)
-            {
-                newCigar[j] = bam_cigar_gen(opLen, BAM_CSOFT_CLIP);
-            }
-            else if (maxMaskLength < opLen && maxMaskLength > 0)
-            {
-                newCigar[j] = bam_cigar_gen(maxMaskLength, BAM_CSOFT_CLIP);
-            }
-            else if (maxMaskLength == 0)
-            {
-                newCigar[j] = bam_cigar_gen(opLen, BAM_CSOFT_CLIP);
-                j++;
-                i++;
-                continue;
-            }
-            j++;
-
-            // update the mask progress
-            refIncrement = std::min(maxMaskLength, opLen);
-            auto oldLen = opLen;
-            opLen = std::max(opLen - maxMaskLength, 0);
-            maxMaskLength = std::max(maxMaskLength - oldLen, 0);
-            if (opLen > 0)
-            {
-                newCigar[j] = bam_cigar_gen(opLen, cigOp);
-                j++;
-            }
-
-            // check to see if we've masked enough
-            if (maxMaskLength == 0 && (bam_cigar_type(newCigar[j - 1]) & 1) && (bam_cigar_type(newCigar[j - 1]) & 2))
-                startPosReached = true;
-        }
-
-        // consume reference sequence
-        if ((bam_cigar_type(cigOp) & 2))
-            startPos += refIncrement;
-
-        i++;
+        uint32_t cigOp = bam_cigar_op(origCigar[i]);
+        uint32_t cigLen = bam_cigar_oplen(origCigar[i]);
+        cigarVector.push_back(cigOp);
+        cigarVector.push_back(cigLen);
     }
 
-    // if we were masking the reverse, we will have reversed the CIGAR to help, so flip it back again now
-    if (reverseMask)
-        reverseCIGAR(newCigar, j);
+    // softmask the record
+    primerTrim(&cigarVector, record, maskEnd, reverse);
 
-    // return a cigarHolder with the new CIGAR deets
-    return {
-        startPos,
-        j,
-        newCigar};
+    // convert updated CIGAR vector back to an array
+    uint32_t cigarLen = cigarVector.size() / 2;
+    auto newCigar = vector2cigar(&cigarVector, cigarLen);
+
+    // replace the records original CIGAR with the updated one
+    replaceCigar(record, newCigar, cigarLen);
 }
 
 // addLineToHeader is the function that actually updates the header and is called by the AddXXtoHeader functions.
@@ -274,14 +295,4 @@ void artic::AddRGtoHeader(bam_hdr_t** header, std::string& rg)
     std::string line = "@RG\tID:";
     line.append(rg + "\tPG:" + PROG_NAME + "\n\0");
     addLineToHeader(header, line.c_str());
-}
-
-// TrimAlignment will softmask an alignment from its start/end up to the provided position.
-void artic::TrimAlignment(bam1_t* record, unsigned int maskEnd, bool reverse)
-{
-    cigarHolder newCigar = primerTrim(record, maskEnd, reverse);
-    record->core.pos += newCigar.startPos;
-    replaceCIGAR(record, newCigar.cigar, newCigar.length);
-    free(newCigar.cigar);
-    return;
 }
