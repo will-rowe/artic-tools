@@ -145,51 +145,51 @@ void primerTrim(std::vector<uint32_t>* cigar, bam1_t* record, uint32_t maskEnd, 
     {
         if (reverseMask)
         {
-            cigar->push_back(0);
+            cigar->push_back(BAM_CMATCH);
             cigar->push_back(extra);
         }
         else
         {
             cigar->push_back(extra);
-            cigar->push_back(0);
+            cigar->push_back(BAM_CMATCH);
         }
         eaten -= extra;
     }
 
-    // check we have something to softclip
-    if (eaten <= 0)
+    // softmask the reverse/forward primer
+    if (reverseMask)
     {
-        // softmask the reverse/forward primer
-        if (reverseMask)
-        {
-            cigar->push_back(BAM_CSOFT_CLIP);
-            cigar->push_back(eaten);
-        }
-        else
-        {
-            // update the position of the leftmost mappinng base
-            record->core.pos = pos - extra;
+        if (eaten <= 0)
+            throw std::runtime_error("invalid cigar operation created - possibly due to INDEL in primer");
+        cigar->push_back(BAM_CSOFT_CLIP);
+        cigar->push_back(eaten);
+    }
+    else
+    {
+        // update the position of the leftmost mappinng base
+        record->core.pos = pos - extra;
 
-            // if proposed softmask leads straight into a deletion, shuffle leftmost mapping base along and ignore the deletion
-            if (cigar->back() == BAM_CDEL)
+        // if proposed softmask leads straight into a deletion, shuffle leftmost mapping base along and ignore the deletion
+        if (cigar->back() == BAM_CDEL)
+        {
+            while (1)
             {
-                while (1)
-                {
+                if (cigar->back() != BAM_CDEL)
+                    break;
 
-                    if (cigar->back() != BAM_CDEL)
-                        break;
-
-                    // remove the deletion operation, add its length to the record start pos and then remove the length from the CIGAR as well
-                    cigar->pop_back();
-                    record->core.pos += cigar->back();
-                    cigar->pop_back();
-                }
+                // remove the deletion operation, add its length to the record start pos and then remove the length from the CIGAR as well
+                cigar->pop_back();
+                uint32_t length = cigar->back();
+                cigar->pop_back();
+                record->core.pos += length;
             }
-
-            // add the soft clip
-            cigar->push_back(eaten);
-            cigar->push_back(BAM_CSOFT_CLIP);
         }
+
+        // add soft clip
+        if (eaten <= 0)
+            throw std::runtime_error("invalid cigar operation created - possibly due to INDEL in primer");
+        cigar->push_back(eaten);
+        cigar->push_back(BAM_CSOFT_CLIP);
     }
 
     // if we flipped the CIGAR at the start, flip it again
