@@ -100,10 +100,15 @@ void artic::Softmasker::_softmask(bool maskPrimers)
 {
 
     // get the amplicon span, with or without primers
-    std::pair<unsigned int, unsigned int> span;
-    (maskPrimers) ? span = _curAmplicon->GetMinSpan() : span = _curAmplicon->GetMaxSpan();
+    std::pair<unsigned int, unsigned int> span = (maskPrimers) ? _curAmplicon->GetMinSpan() : _curAmplicon->GetMaxSpan();
 
-    // TODO: catch trim errors
+    // update a counter before trimming
+    if ((_curRec->core.pos < span.first) || (bam_endpos(_curRec) > span.second))
+    {
+        (maskPrimers) ? _ptrimCounter++ : _trimCounter++;
+    }
+
+    // TODO: catch trim errors / report them via debug
     // if start of alignment is before amplicon start, mask
     if (_curRec->core.pos < span.first)
         TrimAlignment(_curRec, span.first, false);
@@ -111,12 +116,6 @@ void artic::Softmasker::_softmask(bool maskPrimers)
     // if end of alignment is after amplicon end, mask
     if (bam_endpos(_curRec) > span.second)
         TrimAlignment(_curRec, span.second, true);
-
-    // update a counter
-    if ((_curRec->core.pos < span.first) || (bam_endpos(_curRec) > span.second))
-    {
-        (maskPrimers) ? _ptrimCounter++ : _trimCounter++;
-    }
 }
 
 // Softmasker constructor.
