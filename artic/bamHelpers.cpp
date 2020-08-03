@@ -72,6 +72,17 @@ void reverseCigar(uint32_t* cigar, int length)
     }
 }
 
+// printCIGAR will put the BAM CIGAR into human readable format and print to STDOUT.
+void printCIGAR(uint32_t* cigar, int len)
+{
+    for (int i = 0; i < len; ++i)
+    {
+        std::cout << ((cigar[i]) & BAM_CIGAR_MASK);
+        std::cout << "-" << ((cigar[i]) >> BAM_CIGAR_SHIFT) << " ";
+    }
+    std::cout << std::endl;
+}
+
 // primerTrim will perform the softmasking and return a new CIGAR (the caller must replace the existing CIGAR).
 // this function essentially mirrors the python `trim(segment, primer_pos, end, debug)` func from align_trim.
 void primerTrim(std::vector<uint32_t>* cigar, bam1_t* record, uint32_t maskEnd, bool reverseMask)

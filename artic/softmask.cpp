@@ -8,17 +8,6 @@
 #include "log.hpp"
 #include "softmask.hpp"
 
-// printCIGAR will put the BAM CIGAR into human readable format and print to STDOUT.
-void printCIGAR(uint32_t* cigar, int len)
-{
-    for (int i = 0; i < len; ++i)
-    {
-        std::cout << ((cigar[i]) & BAM_CIGAR_MASK);
-        std::cout << "-" << ((cigar[i]) >> BAM_CIGAR_SHIFT) << " ";
-    }
-    std::cout << std::endl;
-}
-
 // getErrorMsg returns the error message for the softmasker error codes.
 const char* getErrorMsg(int errorCode)
 {
