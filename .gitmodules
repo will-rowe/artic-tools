@@ -13,3 +13,6 @@
 [submodule "extlib/spdlog"]
 	path = extlib/spdlog
 	url = https://github.com/gabime/spdlog.git
+[submodule "extlib/ntHash"]
+	path = extlib/ntHash
+	url = https://github.com/bcgsc/ntHash
