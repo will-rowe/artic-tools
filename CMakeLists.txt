@@ -97,9 +97,6 @@ add_subdirectory(extlib/spdlog)
 # rapidcsv
 include_directories(${PROJECT_SOURCE_DIR}/extlib/rapidcsv/src)
 
-# ntHash
-#include_directories(${PROJECT_SOURCE_DIR}/extlib/ntHash)
-
 # google test
 if(BUILD_TESTING)
     add_subdirectory(extlib/googletest)
