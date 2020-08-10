@@ -53,4 +53,4 @@ script:
   - cmake -DCMAKE_BUILD_TYPE=Debug ..
   - make -j2
   - ../bin/artic_tests
-  - ../bin/artic_tools -v
+  - ../bin/artic-tools -v

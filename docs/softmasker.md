@@ -40,7 +40,7 @@ The same inputs and workflow are used, but we have achieved some performance imp
 * during primer search, in the case that a given position is equidistant between two primer sites the upper bound is now used instead of the lower when locating the primer start sites (this typically ends up with more correctly paired primers)
 * output more stats at the end of the report file
 
-The pseudocode for the artic_tools softmasker is:
+The pseudocode for the artic-tools softmasker is:
 
 ```
 for segment in alignment:

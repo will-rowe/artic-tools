@@ -31,7 +31,7 @@ option(BUILD_TESTING "Build unit tests" ON)
 project(ARTIC)
 
 # set the variables
-set(ARTIC_PROG_NAME artic_tools)
+set(ARTIC_PROG_NAME artic-tools)
 set(ARTIC_VERSION_MAJOR 0)
 set(ARTIC_VERSION_MINOR 1)
 set(ARTIC_VERSION_PATCH 0)
