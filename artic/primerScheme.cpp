@@ -79,10 +79,10 @@ void artic::Primer::MergeAlt(const Primer& alt)
 unsigned int artic::Primer::GetNumAlts(void) { return _numAlts; }
 
 // GetStart returns the primer start.
-unsigned int artic::Primer::GetStart(void) { return _start; }
+int64_t artic::Primer::GetStart(void) { return _start; }
 
 // GetEnd returns the primer end.
-unsigned int artic::Primer::GetEnd(void) { return _end; }
+int64_t artic::Primer::GetEnd(void) { return _end; }
 
 // GetID returns the primerID.
 const std::string& artic::Primer::GetID(void) const { return _primerID; }
@@ -128,18 +128,18 @@ const std::string& artic::Amplicon::GetPrimerPool(void)
 }
 
 // GetMaxSpan returns the start and end of the amplicon, including the primer sequence.
-std::pair<unsigned int, unsigned int> artic::Amplicon::GetMaxSpan(void)
+std::pair<int64_t, int64_t> artic::Amplicon::GetMaxSpan(void)
 {
-    std::pair<unsigned int, unsigned int> span;
+    std::pair<int64_t, int64_t> span;
     span.first = _fPrimer->GetStart();
     span.second = _rPrimer->GetEnd();
     return span;
 }
 
 // GetMinSpan returns the start and end of the amplicon, excluding the primer sequence.
-std::pair<unsigned int, unsigned int> artic::Amplicon::GetMinSpan(void)
+std::pair<int64_t, int64_t> artic::Amplicon::GetMinSpan(void)
 {
-    std::pair<unsigned int, unsigned int> span;
+    std::pair<int64_t, int64_t> span;
     span.first = _fPrimer->GetEnd();
     span.second = _rPrimer->GetStart();
     return span;
@@ -349,7 +349,7 @@ std::vector<std::string> artic::PrimerScheme::GetPrimerPools(void) { return _pri
 
 // FindPrimers returns a primer pair with the nearest forward and reverse primer for a given segment start and end.
 // Note: the primer pair may not be correctly paired, check using the IsProperlyPaired() method
-artic::Amplicon artic::PrimerScheme::FindPrimers(unsigned int segStart, unsigned int segEnd)
+artic::Amplicon artic::PrimerScheme::FindPrimers(int64_t segStart, int64_t segEnd)
 {
     //if ((_minStart > segStart) || (_maxEnd < segEnd))
     //{
@@ -358,8 +358,8 @@ artic::Amplicon artic::PrimerScheme::FindPrimers(unsigned int segStart, unsigned
 
     // get the nearest forward primer start
     std::string fPrimerID;
-    std::vector<std::pair<unsigned int, std::string>>::iterator fIterator;
-    fIterator = std::lower_bound(_fPrimerLocations.begin(), _fPrimerLocations.end(), std::pair<unsigned int, std::string>(segStart, {}));
+    std::vector<std::pair<int64_t, std::string>>::iterator fIterator;
+    fIterator = std::lower_bound(_fPrimerLocations.begin(), _fPrimerLocations.end(), std::pair<int64_t, std::string>(segStart, {}));
     if (std::abs(int(fIterator->first - segStart)) <= std::abs(int(std::prev(fIterator, 1)->first - segStart)))
     {
         fPrimerID = fIterator->second;
@@ -371,8 +371,8 @@ artic::Amplicon artic::PrimerScheme::FindPrimers(unsigned int segStart, unsigned
 
     // get the nearest reverse primer end
     std::string rPrimerID;
-    std::vector<std::pair<unsigned int, std::string>>::iterator rIterator;
-    rIterator = std::lower_bound(_rPrimerLocations.begin(), _rPrimerLocations.end(), std::pair<unsigned int, std::string>(segEnd, {}));
+    std::vector<std::pair<int64_t, std::string>>::iterator rIterator;
+    rIterator = std::lower_bound(_rPrimerLocations.begin(), _rPrimerLocations.end(), std::pair<int64_t, std::string>(segEnd, {}));
     if (std::abs(int(rIterator->first - segEnd)) <= std::abs(int(std::prev(rIterator, 1)->first - segEnd)))
     {
         rPrimerID = rIterator->second;

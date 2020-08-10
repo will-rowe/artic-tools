@@ -89,7 +89,7 @@ void artic::Softmasker::_softmask(bool maskPrimers)
 {
 
     // get the amplicon span, with or without primers
-    std::pair<unsigned int, unsigned int> span = (maskPrimers) ? _curAmplicon->GetMinSpan() : _curAmplicon->GetMaxSpan();
+    std::pair<int64_t, int64_t> span = (maskPrimers) ? _curAmplicon->GetMinSpan() : _curAmplicon->GetMaxSpan();
 
     // update a counter before trimming
     if ((_curRec->core.pos < span.first) || (bam_endpos(_curRec) > span.second))
