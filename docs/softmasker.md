@@ -33,10 +33,9 @@ The basic workflow of the original softmasker is as follows:
 
 ## Improved (?) softmasker
 
-The same inputs and workflow are used, but we have achieved some performance improvements (from shuffling logic and porting to CPP) and have made a few minor changes:
+The same inputs and process are used, but we have achieved some performance improvements (from shuffling logic and porting to CPP) and have made a few minor changes:
 
 * optionally filter segments by mapping quality
-* perform both softmasks in single BAM iteration (results in multiple BAM outputs)
 * during primer search, in the case that a given position is equidistant between two primer sites the upper bound is now used instead of the lower when locating the primer start sites (this typically ends up with more correctly paired primers)
 * output more stats at the end of the report file
 
@@ -67,11 +66,6 @@ for segment in alignment:
     # softmask segment within amplicon boundary
     softmask(segment, amplicon, inclPrimers)
     write(outfile1, segment)
-
-    # softmask segment further to exclude primers
-    softmask(segment, amplicon, exclPrimers)
-    write(outfile2, segment)
-
 ``` 
 
 ## Not yet implemented in the release candidate
