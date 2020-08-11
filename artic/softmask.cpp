@@ -93,9 +93,7 @@ void artic::Softmasker::_softmask(bool maskPrimers)
 
     // update a counter before trimming
     if ((_curRec->core.pos < span.first) || (bam_endpos(_curRec) > span.second))
-    {
-        (maskPrimers) ? _ptrimCounter++ : _trimCounter++;
-    }
+        _trimCounter++;
 
     // TODO: catch trim errors / report them via debug
     // if start of alignment is before amplicon start, mask
@@ -108,8 +106,8 @@ void artic::Softmasker::_softmask(bool maskPrimers)
 }
 
 // Softmasker constructor.
-artic::Softmasker::Softmasker(artic::PrimerScheme* primerScheme, const std::string& bamFile, const std::string& userCmd, unsigned int minMAPQ, unsigned int normalise, bool removeBadPairs, bool noReadGroups, const std::string& reportFilename)
-    : _primerScheme(primerScheme), _minMAPQ(minMAPQ), _normalise(normalise), _removeBadPairs(removeBadPairs), _noReadGroups(noReadGroups)
+artic::Softmasker::Softmasker(artic::PrimerScheme* primerScheme, const std::string& bamFile, const std::string& userCmd, unsigned int minMAPQ, unsigned int normalise, bool removeBadPairs, bool noReadGroups, bool primerStart, const std::string& reportFilename)
+    : _primerScheme(primerScheme), _minMAPQ(minMAPQ), _normalise(normalise), _removeBadPairs(removeBadPairs), _noReadGroups(noReadGroups), _maskPrimerStart(primerStart)
 {
 
     // get the input BAM or use STDIN if none given
@@ -154,7 +152,6 @@ artic::Softmasker::Softmasker(artic::PrimerScheme* primerScheme, const std::stri
     _filterDroppedCounter = 0;
     _normaliseDroppedCounter = 0;
     _trimCounter = 0;
-    _ptrimCounter = 0;
 }
 
 // Softmasker destructor.
@@ -171,19 +168,18 @@ artic::Softmasker::~Softmasker(void)
 }
 
 // Run will perform the softmasking on the open BAM file.
-void artic::Softmasker::Run(const std::string& outFilePrefix, bool verbose)
+void artic::Softmasker::Run(bool verbose)
 {
     artic::Log::Init();
     LOG_INFO("starting softmasking");
+    if (_maskPrimerStart)
+        LOG_INFO("include primers in softmask: true");
 
     // open up a new BAM for the output
-    std::string tfn = outFilePrefix + ".trimmed.bam";
-    std::string ptfn = outFilePrefix + ".primertrimmed.bam";
-    htsFile* tBam = hts_open(tfn.c_str(), "wb");
-    htsFile* ptBam = hts_open(ptfn.c_str(), "wb");
-    if (!tBam || !ptBam)
-        throw std::runtime_error("cannot open output BAMs for writing");
-    if ((sam_hdr_write(tBam, _bamHeader) < 0) || (sam_hdr_write(ptBam, _bamHeader) < 0))
+    htsFile* outBam = hts_open("-", "wb");
+    if (!outBam)
+        throw std::runtime_error("cannot open BAM stream for writing");
+    if (sam_hdr_write(outBam, _bamHeader) < 0)
         throw std::runtime_error("could not write header to output BAM stream");
 
     // iterate over the input BAM records
@@ -232,14 +228,9 @@ void artic::Softmasker::Run(const std::string& outFilePrefix, bool verbose)
             continue;
         }
 
-        // softmask amplicon and INCLUDE primer sequences
-        _softmask(false);
-        if (sam_write1(tBam, _bamHeader, _curRec) < 0)
-            throw std::runtime_error("could not write record");
-
-        // softmask amplicon further to EXCLUDE primer sequences
-        _softmask(true);
-        if (sam_write1(ptBam, _bamHeader, _curRec) < 0)
+        // softmask amplicon, either to amplicon start or end
+        _softmask(_maskPrimerStart);
+        if (sam_write1(outBam, _bamHeader, _curRec) < 0)
             throw std::runtime_error("could not write record");
     }
 
@@ -249,7 +240,6 @@ void artic::Softmasker::Run(const std::string& outFilePrefix, bool verbose)
     LOG_INFO("-\t{} alignments dropped by filters", _filterDroppedCounter);
     LOG_INFO("-\t{} alignments dropped after normalisation", _normaliseDroppedCounter);
     LOG_INFO("-\t{} alignments trimmed within amplicons", _trimCounter);
-    LOG_INFO("-\t{} alignments trimmed within amplicon primers", _ptrimCounter);
     if (verbose)
     {
         LOG_TRACE("amplicon\talignment count");
@@ -258,7 +248,6 @@ void artic::Softmasker::Run(const std::string& outFilePrefix, bool verbose)
     }
 
     // close outfiles
-    hts_close(tBam);
-    hts_close(ptBam);
+    hts_close(outBam);
     return;
 }

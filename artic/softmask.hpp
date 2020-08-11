@@ -17,11 +17,11 @@ namespace artic
     {
     public:
         // Softmasker constructor and destructor.
-        Softmasker(artic::PrimerScheme* primerScheme, const std::string& bamFile, const std::string& userCmd, unsigned int minMAPQ, unsigned int normalise, bool removeBadPairs, bool noReadGroups, const std::string& reportFilename);
+        Softmasker(artic::PrimerScheme* primerScheme, const std::string& bamFile, const std::string& userCmd, unsigned int minMAPQ, unsigned int normalise, bool removeBadPairs, bool noReadGroups, bool primerStart, const std::string& reportFilename);
         ~Softmasker(void);
 
         // Run will perform the softmasking on the open BAM file.
-        void Run(const std::string& outFilePrefix, bool verbose);
+        void Run(bool verbose);
 
     private:
         unsigned int _checkRecord(void);      // returns an error if the currently held record fails filters and should be skipped
@@ -42,6 +42,7 @@ namespace artic
         unsigned int _normalise; // the normalise threshold (set to 0 if normalisation not required)
         bool _removeBadPairs;    // ignore records where primers are incorrectly paired
         bool _noReadGroups;      // don't use read group information during soft masking
+        bool _maskPrimerStart;   // mask up to the start of the primers, not the end
 
         // counters
         std::unordered_map<std::string, unsigned int> _ampliconCounter; // counts the amplicon pairs encountered during softmasking
@@ -49,7 +50,6 @@ namespace artic
         unsigned int _filterDroppedCounter;                             // number of records which failed filters
         unsigned int _normaliseDroppedCounter;                          // number of records that were dropped post normalisation
         unsigned int _trimCounter;                                      // number of records that were trimmed within amplicon (either forward or reverse)
-        unsigned int _ptrimCounter;                                     // number of records that were trimmed within amplicon primer sequences (either forward or reverse)
     };
 
 } // namespace artic
