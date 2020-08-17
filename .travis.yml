@@ -42,7 +42,7 @@ install:
   - git submodule update --init --recursive
 
   # install htslib
-  - pushd extlib/htslib
+  - pushd extlibs/htslib
   - autoheader && autoconf && sudo make && sudo make install
   - popd
 

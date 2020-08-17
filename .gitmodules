@@ -1,21 +1,21 @@
-[submodule "extlib/cli11"]
-	path = extlib/cli11
+[submodule "extlibs/cli11"]
+	path = extlibs/cli11
 	url = https://github.com/CLIUtils/CLI11.git
-[submodule "extlib/htslib"]
-	path = extlib/htslib
+[submodule "extlibs/htslib"]
+	path = extlibs/htslib
 	url = https://github.com/samtools/htslib
-[submodule "extlib/rapidcsv"]
-	path = extlib/rapidcsv
+[submodule "extlibs/rapidcsv"]
+	path = extlibs/rapidcsv
 	url = https://github.com/d99kris/rapidcsv.git
-[submodule "extlib/googletest"]
-	path = extlib/googletest
+[submodule "extlibs/googletest"]
+	path = extlibs/googletest
 	url = https://github.com/google/googletest.git
-[submodule "extlib/spdlog"]
-	path = extlib/spdlog
+[submodule "extlibs/spdlog"]
+	path = extlibs/spdlog
 	url = https://github.com/gabime/spdlog.git
-[submodule "extlib/dynamic_bitset"]
-	path = extlib/dynamic_bitset
+[submodule "extlibs/dynamic_bitset"]
+	path = extlibs/dynamic_bitset
 	url = https://github.com/pinam45/dynamic_bitset
-[submodule "extlib/libpopcnt"]
-	path = extlib/libpopcnt
+[submodule "extlibs/libpopcnt"]
+	path = extlibs/libpopcnt
 	url = https://github.com/kimwalisch/libpopcnt
