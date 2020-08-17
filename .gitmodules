@@ -13,3 +13,6 @@
 [submodule "extlib/spdlog"]
 	path = extlib/spdlog
 	url = https://github.com/gabime/spdlog.git
+[submodule "extlib/dynamic_bitset"]
+	path = extlib/dynamic_bitset
+	url = https://github.com/pinam45/dynamic_bitset
