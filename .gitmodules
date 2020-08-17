@@ -19,3 +19,6 @@
 [submodule "extlibs/libpopcnt"]
 	path = extlibs/libpopcnt
 	url = https://github.com/kimwalisch/libpopcnt
+[submodule "extlibs/CLI11"]
+	path = extlibs/CLI11
+	url = https://github.com/CLIUtils/CLI11.git
