@@ -16,3 +16,6 @@
 [submodule "extlib/dynamic_bitset"]
 	path = extlib/dynamic_bitset
 	url = https://github.com/pinam45/dynamic_bitset
+[submodule "extlib/libpopcnt"]
+	path = extlib/libpopcnt
+	url = https://github.com/kimwalisch/libpopcnt
