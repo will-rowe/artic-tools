@@ -12,15 +12,25 @@
 
 ## Overview
 
-Work in progress...
+This collection of tools is being worked on and more utility is due to be added. For now, we have:
 
-At the moment it can serve as a drop in replacement for the `align_trim` functionality of the pipeline, and can also record a few extra stats and allow some extra alignment filtering. See the [docs](https://artic-tools.readthedocs.io/en/latest/softmasker/) for more info on softmasking or checkout the [ARTIC pipeline](https://github.com/artic-network/fieldbioinformatics).
+* primer scheme validation
+* alignment softmasking
+* vcf filtering
+
+Read the [docs](https://artic-tools.readthedocs.io/en/latest/) for more info and checkout the [ARTIC pipeline](https://github.com/artic-network/fieldbioinformatics).
 
 ## Install
 
-`artic-tools` requires CMake and a C++17 compiler.
+### conda
 
-To download and install `artic-tools` run:
+```
+conda install -c bioconda artic-tools
+```
+
+### source
+
+You need CMake, HTSlib and a C++17 compiler. To download and install `artic-tools` run:
 
 ```
 git clone --recursive https://github.com/will-rowe/artic-tools.git

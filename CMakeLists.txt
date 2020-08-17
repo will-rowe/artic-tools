@@ -95,7 +95,6 @@ add_subdirectory(extlibs/CLI11)
 add_subdirectory(extlibs/dynamic_bitset)
 add_subdirectory(extlibs/spdlog)
 
-
 # rapidcsv
 include_directories(${PROJECT_SOURCE_DIR}/extlibs/rapidcsv/src)
 

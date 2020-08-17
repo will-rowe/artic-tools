@@ -1,11 +1,11 @@
-site_name: artic tools
+site_name: artic-tools
 repo_url: https://github.com/will-rowe/artic-tools
 theme: readthedocs
 nav:
-    - Home: "index.md"
-    - "User Guide":
-          - "Installation": "installation.md"
-          - "Quick Start": "quick-start.md"
-          - "Commands": "commands.md"
-    - About:
-          - "Softmasker": "softmasker.md"
+        - Home: "index.md"
+        - "User Guide":
+                  - "Installation": "installation.md"
+                  - "Commands": "commands.md"
+        - About:
+                  - "Primer schemes": "primerscheme.md"
+                  - "Softmasking": "softmasker.md"
