@@ -9,7 +9,7 @@ The `align_trim` command is used to softmask primers from an alignment. It mirro
 Example usage:
 
 ```
-artic-tools align_trim -b in.bam -s primerscheme.bed > out.bam 2> out.log
+artic-tools align_trim -b in.bam primerscheme.bed > out.bam 2> out.log
 ```
 
 ## validate_scheme
@@ -29,5 +29,5 @@ The `vcf_filter` command is used to check a VCF file and filter variants into PA
 Example usage:
 
 ```
-artic-tools vcf_filter -s primerscheme.bed in.vcf
+artic-tools vcf_filter primerscheme.bed in.vcf
 ```

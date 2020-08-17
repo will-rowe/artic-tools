@@ -28,6 +28,7 @@ int main(int argc, char** argv)
     app.require_subcommand();
     CLI::App* softmaskCmd = app.add_subcommand("align_trim", "Trim alignments from an amplicon scheme");
     CLI::App* validatorCmd = app.add_subcommand("validate_scheme", "Validate an amplicon scheme for compliance with ARTIC standards");
+    CLI::App* vcfFilterCmd = app.add_subcommand("vcf_filter", "Filter a VCF file based on primer scheme info and user-defined cut offs");
 
     // add softmask options and flags
     std::string bamFile;
@@ -41,8 +42,8 @@ int main(int argc, char** argv)
     bool noReadGroups = false;
     bool verbose = false;
     softmaskCmd->add_option("-b,--bamFile", bamFile, "The input bam file (will try STDIN if not provided)");
-    softmaskCmd->add_option("primerScheme", primerSchemeFile, "The ARTIC primer scheme")->required()->check(CLI::ExistingFile);
-    softmaskCmd->add_option("--primerSchemeVersion", primerSchemeVersion, "The ARTIC primer scheme version (default = 3)");
+    softmaskCmd->add_option("scheme", primerSchemeFile, "The ARTIC primer scheme")->required()->check(CLI::ExistingFile);
+    softmaskCmd->add_option("--schemeVersion", primerSchemeVersion, "The ARTIC primer scheme version (default = 3)");
     softmaskCmd->add_option("--minMAPQ", minMAPQ, "A minimum MAPQ threshold for processing alignments (default = 15)");
     softmaskCmd->add_option("--normalise", normalise, "Subsample to N coverage per strand (default = 100, deactivate with 0)");
     softmaskCmd->add_option("--report", report, "Output an align_trim report to file");
@@ -51,9 +52,15 @@ int main(int argc, char** argv)
     softmaskCmd->add_flag("--no-read-groups", noReadGroups, "Do not divide reads into groups in SAM output");
     softmaskCmd->add_flag("--verbose", verbose, "Output debugging information to STDERR");
 
-    // add validator required fields
-    validatorCmd->add_option("primerScheme", primerSchemeFile, "The primer scheme to validate")->required()->check(CLI::ExistingFile);
-    validatorCmd->add_option("--primerSchemeVersion", primerSchemeVersion, "The ARTIC primer scheme version (default = 3)");
+    // add validator options and flags
+    validatorCmd->add_option("scheme", primerSchemeFile, "The primer scheme to validate")->required()->check(CLI::ExistingFile);
+    validatorCmd->add_option("--schemeVersion", primerSchemeVersion, "The ARTIC primer scheme version (default = 3)");
+
+    // add vcfFilter options and flags
+    std::string vcfFile;
+    vcfFilterCmd->add_option("scheme", primerSchemeFile, "The primer scheme to use")->required()->check(CLI::ExistingFile);
+    vcfFilterCmd->add_option("vcf", vcfFile, "The input VCF file to filter")->required()->check(CLI::ExistingFile);
+    vcfFilterCmd->add_option("--schemeVersion", primerSchemeVersion, "The ARTIC primer scheme version (default = 3)");
 
     // add the softmask callback
     softmaskCmd->callback([&]() {
@@ -79,6 +86,14 @@ int main(int argc, char** argv)
         std::cout << "scheme ref. span:\t" << ps.GetRefStart() << "-" << ps.GetRefEnd() << std::endl;
         float proportion = (float)ps.GetNumOverlaps() / (float)(ps.GetRefEnd() - ps.GetRefStart());
         std::cout << "scheme overlaps:\t" << proportion * 100 << "%" << std::endl;
+    });
+
+    // add the vcfFilter callback
+    vcfFilterCmd->callback([&]() {
+        // load and check the primer scheme
+        artic::PrimerScheme ps = artic::PrimerScheme(primerSchemeFile, primerSchemeVersion);
+
+        std::cout << "filter called" << std::endl;
     });
 
     // parse CLI
