@@ -7,7 +7,7 @@ using namespace artic;
 
 // some test parameters
 const unsigned int version = 3;
-const unsigned int numPools = 3; // includes "unmatched"
+const unsigned int numPools = 2;
 const unsigned int numPrimers = 218;
 const unsigned int numAlts = 22;
 const unsigned int numAmplicons = 98;
