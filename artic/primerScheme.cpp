@@ -15,14 +15,14 @@ const std::string tag_altPrimer = "_alt";
 const std::string Unmatched_Pool = "unmatched";
 
 // Primer constructor.
-artic::Primer::Primer(unsigned int start, unsigned int end, const std::string primerID, const std::string poolName)
-    : _start(start), _end(end), _primerID(primerID), _poolName(poolName)
+artic::Primer::Primer(unsigned int start, unsigned int end, const std::string primerID, size_t poolID)
+    : _start(start), _end(end), _primerID(primerID), _poolID(poolID)
 {
     _numAlts = 0;
 
     // check the fields are valid and add the direction
-    if (_primerID.empty() || _poolName.empty())
-        throw std::runtime_error("primer constructor received missing field");
+    if (_primerID.empty())
+        throw std::runtime_error("primer constructor received missing ID");
 
     // add the direction, based on the primer ID
     std::size_t left = primerID.find(tag_leftPrimer);
@@ -77,49 +77,11 @@ const std::string& artic::Primer::GetID(void) const { return _primerID; }
 // GetBaseID returns the baseID of the primer (with no alt or LEFT/RIGHT tag).
 const std::string& artic::Primer::GetBaseID(void) const { return _baseID; }
 
-// GetPrimerPool returns the primer pool for the primer.
-const std::string& artic::Primer::GetPrimerPool(void) const { return _poolName; }
+// GetPrimerPoolID returns the primer pool ID for the primer.
+size_t artic::Primer::GetPrimerPoolID(void) const { return _poolID; }
 
 // IsForward returns the primer direction (true = forward, false = reverse).
 bool artic::Primer::IsForward(void) { return _isForward; }
-
-// Amplicon constructor.
-artic::Amplicon::Amplicon(Primer* p1, Primer* p2)
-    : _fPrimer(p1), _rPrimer(p2)
-{
-}
-
-// IsProperlyPaired returns true if this primer is properly paired.
-bool artic::Amplicon::IsProperlyPaired(void)
-{
-    // paired if baseID matches, directions oppose and primer pool matches
-    return (_fPrimer->GetBaseID() == _rPrimer->GetBaseID()) &&
-           (_fPrimer->IsForward() != _rPrimer->IsForward()) &&
-           (_fPrimer->GetPrimerPool() == _rPrimer->GetPrimerPool());
-}
-
-// GetID returns the shared ID string of the primer pair.
-const std::string artic::Amplicon::GetID(void) { return std::string(_fPrimer->GetID() + "_" + _rPrimer->GetID()); }
-
-// GetPrimerPool returns the pool for the primer pair (Unmatched_Pool if not properly paired).
-const std::string& artic::Amplicon::GetPrimerPool(void)
-{
-    if (IsProperlyPaired())
-        return _fPrimer->GetPrimerPool();
-    return Unmatched_Pool;
-}
-
-// GetMaxSpan returns the start and end of the amplicon, including the primer sequence.
-std::pair<int64_t, int64_t> artic::Amplicon::GetMaxSpan(void) { return std::pair(_fPrimer->GetStart(), _rPrimer->GetEnd()); }
-
-// GetMinSpan returns the start and end of the amplicon, excluding the primer sequence.
-std::pair<int64_t, int64_t> artic::Amplicon::GetMinSpan(void) { return std::pair(_fPrimer->GetEnd(), _rPrimer->GetStart()); }
-
-// GetForwardPrimer returns a pointer to the forward primer in the amplicon.
-const artic::Primer* artic::Amplicon::GetForwardPrimer(void) { return _fPrimer; }
-
-// GetReversePrimer returns a pointer to the reverse primer in the amplicon.
-const artic::Primer* artic::Amplicon::GetReversePrimer(void) { return _rPrimer; }
 
 // PrimerScheme constructor.
 artic::PrimerScheme::PrimerScheme(const std::string inputFile, unsigned int schemeVersion)
@@ -165,11 +127,30 @@ artic::PrimerScheme::PrimerScheme(const std::string inputFile, unsigned int sche
             _referenceID = row[0];
         }
 
+        // add the primer pool to the scheme and get a lookup int for the primers
+        size_t poolID = 0;
+        std::vector<std::string>::iterator poolItr = std::find(_primerPools.begin(), _primerPools.end(), row[4]);
+        if (poolItr != _primerPools.end())
+        {
+            poolID = poolItr - _primerPools.begin();
+        }
+        else
+        {
+            // store the primer pool name
+            _primerPools.emplace_back(row[4]);
+
+            // add a bit vector for storing pool primer locations
+            _primerSites.emplace_back(sul::dynamic_bitset());
+
+            // get the pool ID for the new pool name
+            poolID = _primerPools.size() - 1;
+        }
+
         // try converting the primer scheme row into a primer object
         Primer* primer;
         try
         {
-            primer = new Primer(std::stoi(row[1]), std::stoi(row[2]), row[3], row[4]);
+            primer = new Primer(std::stoi(row[1]), std::stoi(row[2]), row[3], poolID);
         }
         catch (const std::exception& e)
         {
@@ -179,11 +160,6 @@ artic::PrimerScheme::PrimerScheme(const std::string inputFile, unsigned int sche
 
         // increment the raw primer counter
         _numPrimers++;
-
-        // add the primer pool
-        std::vector<std::string>::iterator poolItr = std::find(_primerPools.begin(), _primerPools.end(), primer->GetPrimerPool());
-        if (poolItr == _primerPools.end())
-            _primerPools.emplace_back(primer->GetPrimerPool());
 
         // chomp off any alt tag to get the canonical primer ID
         std::string canonicalID = row[3].substr(0, row[3].find(tag_altPrimer));
@@ -263,6 +239,24 @@ unsigned int artic::PrimerScheme::GetMeanAmpliconSpan(void) { return _meanAmplic
 // GetPrimerPools returns the primer pools found in the primer scheme.
 std::vector<std::string> artic::PrimerScheme::GetPrimerPools(void) { return _primerPools; }
 
+// GetPrimerPool returns the primer pool for the provided pool ID.
+const std::string& artic::PrimerScheme::GetPrimerPool(size_t poolID) const
+{
+    if (poolID < 0 || poolID >= _primerPools.size())
+        throw std::runtime_error("poolID not found in scheme pools - " + std::to_string(poolID));
+    return _primerPools.at(poolID);
+}
+
+// GetPrimerPoolID returns the primer pool ID for the provided pool name.
+size_t artic::PrimerScheme::GetPrimerPoolID(const std::string& poolName) const
+{
+    auto itr = std::find(_primerPools.begin(), _primerPools.end(), poolName);
+    if (itr != _primerPools.end())
+        return itr - _primerPools.begin();
+    else
+        throw std::runtime_error("pool name not found in scheme - " + poolName);
+}
+
 // GetRefStart returns the first position in the reference covered by the primer scheme.
 int64_t artic::PrimerScheme::GetRefStart(void) { return _refStart; }
 
@@ -307,10 +301,8 @@ artic::Amplicon artic::PrimerScheme::FindPrimers(int64_t segStart, int64_t segEn
     schemeMap::iterator i = _fPrimers.find(fPrimerID);
     schemeMap::iterator j = _rPrimers.find(rPrimerID);
     if ((i == _fPrimers.end()) || (j == _rPrimers.end()))
-    {
         throw std::runtime_error("primer dropped from scheme - " + fPrimerID + " & " + rPrimerID);
-    }
-    return Amplicon(i->second, j->second);
+    return Amplicon(i->second, j->second, this);
 }
 
 // CheckAmpliconOverlap returns true if the queried position is covered by multiple primers.
@@ -322,14 +314,12 @@ bool artic::PrimerScheme::CheckAmpliconOverlap(int64_t pos)
 }
 
 // CheckPrimerSite returns true if the queried position is a primer site for the given pool.
-bool artic::PrimerScheme::CheckPrimerSite(int64_t pos, std::string pool)
+bool artic::PrimerScheme::CheckPrimerSite(int64_t pos, const std::string& poolName)
 {
     if ((_refStart > pos) || (_refEnd < pos))
         throw std::runtime_error("query position outside of primer scheme bounds");
-    auto itr = _primerSites.find(pool);
-    if (itr == _primerSites.end())
-        throw std::runtime_error("primer pool found in scheme - " + pool);
-    return itr->second.test(pos);
+    auto poolID = GetPrimerPoolID(poolName);
+    return _primerSites.at(poolID).test(pos);
 }
 
 // _checkScheme will check all forward primers have a paired reverse primer and record some primer scheme stats.
@@ -394,20 +384,59 @@ void artic::PrimerScheme::_checkScheme(void)
     }
 
     // store the primer sites per pool
-    for (auto pool : _primerPools)
+    for (size_t poolID = 0; poolID < _primerPools.size(); ++poolID)
     {
-        sul::dynamic_bitset<> primerSites;
-        primerSites.resize(_refEnd - _refStart, 0);
+        _primerSites.at(poolID).resize(_refEnd - _refStart, 0);
         for (auto const& primer : _fPrimers)
         {
-            if (primer.second->GetPrimerPool() == pool)
-                primerSites.set(primer.second->GetStart(), primer.second->GetLen(), 1);
+            if (primer.second->GetPrimerPoolID() == poolID)
+                _primerSites.at(poolID).set(primer.second->GetStart(), primer.second->GetLen(), 1);
         }
         for (auto const& primer : _rPrimers)
         {
-            if (primer.second->GetPrimerPool() == pool)
-                primerSites.set(primer.second->GetEnd(), primer.second->GetLen(), 1);
+            if (primer.second->GetPrimerPoolID() == poolID)
+                _primerSites.at(poolID).set(primer.second->GetEnd(), primer.second->GetLen(), 1);
         }
-        _primerSites.emplace(pool, primerSites);
     }
 }
+
+// Amplicon constructor.
+artic::Amplicon::Amplicon(Primer* p1, Primer* p2, PrimerScheme* scheme)
+    : _fPrimer(p1), _rPrimer(p2), _scheme(scheme)
+{
+}
+
+// IsProperlyPaired returns true if this primer is properly paired.
+bool artic::Amplicon::IsProperlyPaired(void)
+{
+    // paired if baseID matches, directions oppose and primer pool matches
+    return (_fPrimer->GetBaseID() == _rPrimer->GetBaseID()) &&
+           (_fPrimer->IsForward() != _rPrimer->IsForward()) &&
+           (_fPrimer->GetPrimerPoolID() == _rPrimer->GetPrimerPoolID());
+}
+
+// GetID returns the shared ID string of the primer pair.
+const std::string artic::Amplicon::GetID(void) const { return std::string(_fPrimer->GetID() + "_" + _rPrimer->GetID()); }
+
+// GetPrimerPoolID returns the pool for the primer pair (Unmatched returned if primers not properly paired).
+const std::string& artic::Amplicon::GetPrimerPool(void)
+{
+    if (IsProperlyPaired())
+    {
+        auto id = _fPrimer->GetPrimerPoolID();
+        return _scheme->GetPrimerPool(id);
+    }
+    return Unmatched_Pool;
+}
+
+// GetMaxSpan returns the start and end of the amplicon, including the primer sequence.
+std::pair<int64_t, int64_t> artic::Amplicon::GetMaxSpan(void) { return std::pair(_fPrimer->GetStart(), _rPrimer->GetEnd()); }
+
+// GetMinSpan returns the start and end of the amplicon, excluding the primer sequence.
+std::pair<int64_t, int64_t> artic::Amplicon::GetMinSpan(void) { return std::pair(_fPrimer->GetEnd(), _rPrimer->GetStart()); }
+
+// GetForwardPrimer returns a pointer to the forward primer in the amplicon.
+const artic::Primer* artic::Amplicon::GetForwardPrimer(void) { return _fPrimer; }
+
+// GetReversePrimer returns a pointer to the reverse primer in the amplicon.
+const artic::Primer* artic::Amplicon::GetReversePrimer(void) { return _rPrimer; }

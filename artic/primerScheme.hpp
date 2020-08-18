@@ -9,6 +9,10 @@
 
 namespace artic
 {
+    class Primer;
+    class PrimerScheme;
+    class Amplicon;
+    typedef std::unordered_map<std::string, Primer*> schemeMap;
 
     //******************************************************************************
     // Primer class holds primer information.
@@ -22,7 +26,7 @@ namespace artic
     {
     public:
         // Primer constructor.
-        Primer(unsigned int start, unsigned int end, const std::string primerID, const std::string poolName);
+        Primer(unsigned int start, unsigned int end, const std::string primerID, size_t poolID);
 
         // MergeAlt will merge a primer with an alt, yielding a primer with the maximal span.
         void MergeAlt(const Primer& alt);
@@ -45,8 +49,8 @@ namespace artic
         // GetBaseID returns the baseID of the primer (with _LEFT/_RIGHT stripped).
         const std::string& GetBaseID(void) const;
 
-        // GetPrimerPool returns the pool for the primer pair.
-        const std::string& GetPrimerPool(void) const;
+        // GetPrimerPoolID returns the pool ID for the primer pair.
+        size_t GetPrimerPoolID(void) const;
 
         // IsForward returns the primer direction (true = forward, false = reverse).
         bool IsForward(void);
@@ -55,48 +59,10 @@ namespace artic
         int64_t _start;
         int64_t _end;
         std::string _primerID;
-        std::string _poolName;
+        size_t _poolID;
         bool _isForward;
         unsigned int _numAlts;
         std::string _baseID;
-    };
-
-    // schemeMap is a typedefd map for holding primerID to primer object pointer
-    typedef std::unordered_map<std::string, Primer*> schemeMap;
-
-    //******************************************************************************
-    // Amplicon is a container for two primers.
-    //******************************************************************************
-    class Amplicon
-    {
-    public:
-        // Amplicon constructor.
-        Amplicon(Primer* p1, Primer* p2);
-
-        // IsProperlyPaired returns true if the amplicon primers are properly paired.
-        bool IsProperlyPaired(void);
-
-        // GetID returns the ID string of the primer pair (combines primer IDs).
-        const std::string GetID(void);
-
-        // GetPrimerPool returns the pool for the primer pair (Unmatched_Pool if not properly paired).
-        const std::string& GetPrimerPool(void);
-
-        // GetMaxSpan returns the start and end of the amplicon, including the primer sequence.
-        std::pair<int64_t, int64_t> GetMaxSpan(void);
-
-        // GetMinSpan returns the start and end of the amplicon, excluding the primer sequence.
-        std::pair<int64_t, int64_t> GetMinSpan(void);
-
-        // GetForwardPrimer returns a reference to the forward primer in the amplicon.
-        const Primer* GetForwardPrimer(void);
-
-        // GetReversePrimer returns a reference to the reverse primer in the amplicon.
-        const Primer* GetReversePrimer(void);
-
-    private:
-        Primer* _fPrimer; // pointer to the forward primer object
-        Primer* _rPrimer; // pointer to the reverse primer object
     };
 
     //******************************************************************************
@@ -130,8 +96,14 @@ namespace artic
         // GetMeanAmpliconSpan returns the mean amplicon span (including primer sequence).
         unsigned int GetMeanAmpliconSpan(void);
 
-        // GetPrimerPools returns the primer pools found in the primer scheme.
+        // GetPrimerPools returns all the primer pools found in the primer scheme.
         std::vector<std::string> GetPrimerPools(void);
+
+        // GetPrimerPool returns the primer pool for the provided pool ID.
+        const std::string& GetPrimerPool(size_t poolID) const;
+
+        // GetPrimerPoolID returns the primer pool ID for the provided pool name.
+        size_t GetPrimerPoolID(const std::string& poolName) const;
 
         // GetRefStart returns the first position in the reference covered by the primer scheme.
         int64_t GetRefStart(void);
@@ -149,28 +121,65 @@ namespace artic
         bool CheckAmpliconOverlap(int64_t pos);
 
         // CheckPrimerSite returns true if the queried position is a primer site for the given pool.
-        bool CheckPrimerSite(int64_t pos, std::string pool);
+        bool CheckPrimerSite(int64_t pos, const std::string& poolName);
 
     private:
         void _checkScheme(void); // _checkScheme will check all forward primers have a paired reverse primer and record some primer scheme stats
 
-        unsigned int _version;                                               // the primer scheme version (based on the ARTIC versioning)
-        std::string _referenceID;                                            // the ID of the reference sequence covered by the primer scheme
-        unsigned int _numPrimers;                                            // the total number of primers in the scheme
-        unsigned int _numAlts;                                               // the number of alts that were merged when the scheme was read
-        unsigned int _numAmplicons;                                          // the number of amplicons in the scheme
-        unsigned int _meanAmpliconSpan;                                      // the mean amplicon span
-        int64_t _refStart;                                                   // the first position in the reference covered by the primer scheme
-        int64_t _refEnd;                                                     // the last position in the reference covered by the primer scheme
-        std::vector<std::string> _primerPools;                               // the primer pool IDs found in the primer scheme
-        schemeMap _fPrimers;                                                 // the forward primers for the scheme
-        schemeMap _rPrimers;                                                 // the reverse primers for the scheme
-        std::vector<std::pair<int64_t, std::string>> _fPrimerLocations;      // the start position and primerID of each forward primer in the scheme
-        std::vector<std::pair<int64_t, std::string>> _rPrimerLocations;      // the end position and primerID of each reverse primer in the scheme
-        sul::dynamic_bitset<> _ampliconOverlaps;                             // bit vector encoding all the overlap positions in the scheme
-        std::unordered_map<std::string, sul::dynamic_bitset<>> _primerSites; // primer sites, stored in a bit vector per primer pool
-        //std::unordered_map<std::string, Amplicon> _amplicons;           // the expected amplicons produced by the scheme
+        unsigned int _version;                                          // the primer scheme version (based on the ARTIC versioning)
+        std::string _referenceID;                                       // the ID of the reference sequence covered by the primer scheme
+        unsigned int _numPrimers;                                       // the total number of primers in the scheme
+        unsigned int _numAlts;                                          // the number of alts that were merged when the scheme was read
+        unsigned int _numAmplicons;                                     // the number of amplicons in the scheme
+        unsigned int _meanAmpliconSpan;                                 // the mean amplicon span
+        int64_t _refStart;                                              // the first position in the reference covered by the primer scheme
+        int64_t _refEnd;                                                // the last position in the reference covered by the primer scheme
+        std::vector<std::string> _primerPools;                          // the primer pool IDs found in the primer scheme
+        schemeMap _fPrimers;                                            // the forward primers for the scheme
+        schemeMap _rPrimers;                                            // the reverse primers for the scheme
+        std::vector<std::pair<int64_t, std::string>> _fPrimerLocations; // the start position and primerID of each forward primer in the scheme
+        std::vector<std::pair<int64_t, std::string>> _rPrimerLocations; // the end position and primerID of each reverse primer in the scheme
+        sul::dynamic_bitset<> _ampliconOverlaps;                        // bit vector encoding all the overlap positions in the scheme
+        std::vector<sul::dynamic_bitset<>> _primerSites;                // primer sites, stored in a bit vector per primer pool
+        //std::unordered_map<std::string, Amplicon> _amplicons;         // the expected amplicons produced by the scheme
     };
+
+    //******************************************************************************
+    // Amplicon is a container for two primers.
+    //******************************************************************************
+    class Amplicon
+    {
+    public:
+        // Amplicon constructor.
+        Amplicon(Primer* p1, Primer* p2, PrimerScheme* scheme);
+
+        // IsProperlyPaired returns true if the amplicon primers are properly paired.
+        bool IsProperlyPaired(void);
+
+        // GetID returns the ID string of the primer pair (combines primer IDs).
+        const std::string GetID(void) const;
+
+        // GetPrimerPool returns the pool for the primer pair (Unmatched returned if not properly paired).
+        const std::string& GetPrimerPool(void);
+
+        // GetMaxSpan returns the start and end of the amplicon, including the primer sequence.
+        std::pair<int64_t, int64_t> GetMaxSpan(void);
+
+        // GetMinSpan returns the start and end of the amplicon, excluding the primer sequence.
+        std::pair<int64_t, int64_t> GetMinSpan(void);
+
+        // GetForwardPrimer returns a reference to the forward primer in the amplicon.
+        const Primer* GetForwardPrimer(void);
+
+        // GetReversePrimer returns a reference to the reverse primer in the amplicon.
+        const Primer* GetReversePrimer(void);
+
+    private:
+        Primer* _fPrimer;      // pointer to the forward primer object
+        Primer* _rPrimer;      // pointer to the reverse primer object
+        PrimerScheme* _scheme; // pointer to the primer scheme
+    };
+
 } // namespace artic
 
 #endif
