@@ -154,21 +154,21 @@ namespace artic
     private:
         void _checkScheme(void); // _checkScheme will check all forward primers have a paired reverse primer and record some primer scheme stats
 
-        unsigned int _version;                                               // the primer scheme version (based on the ARTIC versioning)
-        std::string _referenceID;                                            // the ID of the reference sequence covered by the primer scheme
-        unsigned int _numPrimers;                                            // the total number of primers in the scheme
-        unsigned int _numAlts;                                               // the number of alts that were merged when the scheme was read
-        unsigned int _numAmplicons;                                          // the number of amplicons in the scheme
-        unsigned int _meanAmpliconSpan;                                      // the mean amplicon span
-        int64_t _refStart;                                                   // the first position in the reference covered by the primer scheme
-        int64_t _refEnd;                                                     // the last position in the reference covered by the primer scheme
-        std::vector<std::string> _primerPools;                               // the primer pool IDs found in the primer scheme
-        schemeMap _fPrimers;                                                 // the forward primers for the scheme
-        schemeMap _rPrimers;                                                 // the reverse primers for the scheme
-        std::vector<std::pair<int64_t, std::string>> _fPrimerLocations;      // the start position and primerID of each forward primer in the scheme
-        std::vector<std::pair<int64_t, std::string>> _rPrimerLocations;      // the end position and primerID of each reverse primer in the scheme
-        sul::dynamic_bitset<> _ampliconOverlaps;                             // bit vector encoding all the overlap positions in the scheme
-        std::unordered_map<std::string, sul::dynamic_bitset<>> _primerSites; // primer sites, stored in a bit vector per primer pool
+        unsigned int _version;                                                       // the primer scheme version (based on the ARTIC versioning)
+        std::string _referenceID;                                                    // the ID of the reference sequence covered by the primer scheme
+        unsigned int _numPrimers;                                                    // the total number of primers in the scheme
+        unsigned int _numAlts;                                                       // the number of alts that were merged when the scheme was read
+        unsigned int _numAmplicons;                                                  // the number of amplicons in the scheme
+        unsigned int _meanAmpliconSpan;                                              // the mean amplicon span
+        int64_t _refStart;                                                           // the first position in the reference covered by the primer scheme
+        int64_t _refEnd;                                                             // the last position in the reference covered by the primer scheme
+        std::vector<std::string> _primerPools;                                       // the primer pool IDs found in the primer scheme
+        schemeMap _fPrimers;                                                         // the forward primers for the scheme
+        schemeMap _rPrimers;                                                         // the reverse primers for the scheme
+        std::vector<std::pair<int64_t, std::string>> _fPrimerLocations;              // the start position and primerID of each forward primer in the scheme
+        std::vector<std::pair<int64_t, std::string>> _rPrimerLocations;              // the end position and primerID of each reverse primer in the scheme
+        sul::dynamic_bitset<uint16_t> _ampliconOverlaps;                             // bit vector encoding all the overlap positions in the scheme
+        std::unordered_map<std::string, sul::dynamic_bitset<uint16_t>> _primerSites; // primer sites, stored in a bit vector per primer pool
         //std::unordered_map<std::string, Amplicon> _amplicons;           // the expected amplicons produced by the scheme
     };
 } // namespace artic
