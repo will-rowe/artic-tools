@@ -396,7 +396,8 @@ void artic::PrimerScheme::_checkScheme(void)
     // store the primer sites per pool
     for (auto pool : _primerPools)
     {
-        sul::dynamic_bitset<uint16_t> primerSites(_refEnd - _refStart, 0);
+        sul::dynamic_bitset<> primerSites;
+        primerSites.resize(_refEnd - _refStart, 0);
         for (auto const& primer : _fPrimers)
         {
             if (primer.second->GetPrimerPool() == pool)
