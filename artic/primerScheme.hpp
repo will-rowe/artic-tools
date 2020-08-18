@@ -145,7 +145,7 @@ namespace artic
         // FindPrimers returns pointers to the nearest forward and reverse primer, given an alignment segment's start and end position.
         Amplicon FindPrimers(int64_t segStart, int64_t segEnd);
 
-        // CheckAmpliconOverlap returns true if the queried position is covered by multiple primers.
+        // CheckAmpliconOverlap returns true if the queried position is covered by multiple amplicons (incl. primer sequence).
         bool CheckAmpliconOverlap(int64_t pos);
 
         // CheckPrimerSite returns true if the queried position is a primer site for the given pool.

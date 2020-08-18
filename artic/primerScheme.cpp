@@ -378,7 +378,7 @@ void artic::PrimerScheme::_checkScheme(void)
     _refEnd = _rPrimerLocations.back().first;
 
     // store the primer overlap regions
-    _ampliconOverlaps.resize(_refEnd - _refStart);
+    _ampliconOverlaps.resize(_refEnd - _refStart, 0);
     for (unsigned int i = 0; i < _numAmplicons - 1; i++)
     {
         if (_fPrimerLocations.at(i + 1).first < _rPrimerLocations.at(i).first)
@@ -397,7 +397,7 @@ void artic::PrimerScheme::_checkScheme(void)
     for (auto pool : _primerPools)
     {
         sul::dynamic_bitset<> primerSites;
-        primerSites.resize(_refEnd - _refStart);
+        primerSites.resize(_refEnd - _refStart, 0);
         for (auto const& primer : _fPrimers)
         {
             if (primer.second->GetPrimerPool() == pool)
