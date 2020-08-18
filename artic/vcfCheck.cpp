@@ -76,7 +76,7 @@ void artic::VcfChecker::Run(bool noLog)
         if (refID != _primerScheme->GetReferenceID())
         {
             if (!noLog)
-                LOG_WARN("variant reference ID does not match primer scheme reference - {}", refID);
+                LOG_WARN("skipping, variant reference ID does not match primer scheme reference - {}", refID);
             continue;
         }
 
@@ -84,7 +84,7 @@ void artic::VcfChecker::Run(bool noLog)
         if (_curRec->pos < _primerScheme->GetRefStart() || _curRec->pos > _primerScheme->GetRefEnd())
         {
             if (!noLog)
-                LOG_WARN("variant outside of scheme bounds - {} at {}", _curRec->d.allele[1], _curRec->pos);
+                LOG_WARN("skipping, variant outside of scheme bounds - {} at {}", _curRec->d.allele[1], _curRec->pos);
             continue;
         }
 
@@ -93,7 +93,7 @@ void artic::VcfChecker::Run(bool noLog)
         if (ndst == 0)
         {
             if (!noLog)
-                LOG_WARN("no Pool information for variant at {}", _curRec->pos);
+                LOG_WARN("skipping, no pool information for variant at {}", _curRec->pos);
             continue;
         }
         std::string pool(dst);
@@ -101,17 +101,18 @@ void artic::VcfChecker::Run(bool noLog)
         if (poolItr == primerPools.end())
         {
             if (!noLog)
-                LOG_WARN("variant Pool not in scheme - {}", dst);
+                LOG_WARN("skipping, pool not found in scheme - {}", dst);
             continue;
         }
 
         // check if in primer site
         if (_primerScheme->CheckPrimerSite(_curRec->pos, pool))
         {
+            if (!noLog && _dropPrimerVars)
+                LOG_WARN("skipping, variant found within primer sequence - {}", _curRec->pos);
+            continue;
             if (!noLog)
                 LOG_WARN("variant found within primer sequence - {}", _curRec->pos);
-            if (_dropPrimerVars)
-                continue;
         }
 
         // check amplicon overlap
@@ -120,7 +121,7 @@ void artic::VcfChecker::Run(bool noLog)
             if (!noLog)
                 LOG_WARN("variant found in scheme region with amplicon overlap - {}", _curRec->pos);
 
-            // add to a list
+            // add to a list and check concordance
         }
 
         _keepCounter++;
