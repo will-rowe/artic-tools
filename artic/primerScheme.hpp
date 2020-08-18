@@ -36,6 +36,9 @@ namespace artic
         // GetEnd returns the primer end.
         int64_t GetEnd(void);
 
+        // GetLen returns the length of the primer sequence.
+        unsigned int GetLen(void);
+
         // GetID returns the primerID.
         const std::string& GetID(void) const;
 
@@ -45,15 +48,15 @@ namespace artic
         // GetPrimerPool returns the pool for the primer pair.
         const std::string& GetPrimerPool(void) const;
 
-        // GetDirection returns the primer direction (0 = forward, 1 = reverse).
-        bool GetDirection(void);
+        // IsForward returns the primer direction (true = forward, false = reverse).
+        bool IsForward(void);
 
     private:
         int64_t _start;
         int64_t _end;
         std::string _primerID;
         std::string _poolName;
-        bool _direction;
+        bool _isForward;
         unsigned int _numAlts;
         std::string _baseID;
     };
@@ -142,27 +145,31 @@ namespace artic
         // FindPrimers returns pointers to the nearest forward and reverse primer, given an alignment segment's start and end position.
         Amplicon FindPrimers(int64_t segStart, int64_t segEnd);
 
-        // CheckOverlap returns true if the queried position is covered by multiple primers.
-        bool CheckOverlap(int64_t pos);
+        // CheckAmpliconOverlap returns true if the queried position is covered by multiple primers.
+        bool CheckAmpliconOverlap(int64_t pos);
+
+        // CheckPrimerSite returns true if the queried position is a primer site for the given pool.
+        bool CheckPrimerSite(int64_t pos, std::string pool);
 
     private:
-        unsigned int _version;                                          // the primer scheme version (based on the ARTIC versioning)
-        std::string _referenceID;                                       // the ID of the reference sequence covered by the primer scheme
-        unsigned int _numPrimers;                                       // the total number of primers in the scheme
-        unsigned int _numAlts;                                          // the number of alts that were merged when the scheme was read
-        unsigned int _numAmplicons;                                     // the number of amplicons in the scheme
-        unsigned int _meanAmpliconSpan;                                 // the mean amplicon span
-        int64_t _refStart;                                              // the first position in the reference covered by the primer scheme
-        int64_t _refEnd;                                                // the last position in the reference covered by the primer scheme
-        std::vector<std::string> _primerPools;                          // the primer pool IDs found in the primer scheme
-        schemeMap _fPrimers;                                            // the forward primers for the scheme
-        schemeMap _rPrimers;                                            // the reverse primers for the scheme
-        std::vector<std::pair<int64_t, std::string>> _fPrimerLocations; // the start position and primerID of each forward primer in the scheme
-        std::vector<std::pair<int64_t, std::string>> _rPrimerLocations; // the end position and primerID of each reverse primer in the scheme
-        sul::dynamic_bitset<> _overlaps;                                // bit vector encoding all the overlap positions in the scheme
-        //std::unordered_map<std::string, Amplicon> _amplicons;           // the expected amplicons produced by the scheme
-
         void _checkScheme(void); // _checkScheme will check all forward primers have a paired reverse primer and record some primer scheme stats
+
+        unsigned int _version;                                               // the primer scheme version (based on the ARTIC versioning)
+        std::string _referenceID;                                            // the ID of the reference sequence covered by the primer scheme
+        unsigned int _numPrimers;                                            // the total number of primers in the scheme
+        unsigned int _numAlts;                                               // the number of alts that were merged when the scheme was read
+        unsigned int _numAmplicons;                                          // the number of amplicons in the scheme
+        unsigned int _meanAmpliconSpan;                                      // the mean amplicon span
+        int64_t _refStart;                                                   // the first position in the reference covered by the primer scheme
+        int64_t _refEnd;                                                     // the last position in the reference covered by the primer scheme
+        std::vector<std::string> _primerPools;                               // the primer pool IDs found in the primer scheme
+        schemeMap _fPrimers;                                                 // the forward primers for the scheme
+        schemeMap _rPrimers;                                                 // the reverse primers for the scheme
+        std::vector<std::pair<int64_t, std::string>> _fPrimerLocations;      // the start position and primerID of each forward primer in the scheme
+        std::vector<std::pair<int64_t, std::string>> _rPrimerLocations;      // the end position and primerID of each reverse primer in the scheme
+        sul::dynamic_bitset<> _ampliconOverlaps;                             // bit vector encoding all the overlap positions in the scheme
+        std::unordered_map<std::string, sul::dynamic_bitset<>> _primerSites; // primer sites, stored in a bit vector per primer pool
+        //std::unordered_map<std::string, Amplicon> _amplicons;           // the expected amplicons produced by the scheme
     };
 } // namespace artic
 

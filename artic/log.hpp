@@ -14,7 +14,7 @@ namespace artic
         static std::shared_ptr<spdlog::logger> s_Clientlogger;
 
     public:
-        static void Init();
+        static void Init(std::string subtool);
         inline static std::shared_ptr<spdlog::logger>& GetCoreLogger() { return s_Corelogger; };
         inline static std::shared_ptr<spdlog::logger>& GetClientLogger() { return s_Clientlogger; };
     };

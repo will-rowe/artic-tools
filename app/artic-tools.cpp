@@ -4,6 +4,7 @@
 
 #include <artic/primerScheme.hpp>
 #include <artic/softmask.hpp>
+#include <artic/vcfCheck.hpp>
 #include <artic/version.hpp>
 using namespace artic;
 
@@ -28,7 +29,7 @@ int main(int argc, char** argv)
     app.require_subcommand();
     CLI::App* softmaskCmd = app.add_subcommand("align_trim", "Trim alignments from an amplicon scheme");
     CLI::App* validatorCmd = app.add_subcommand("validate_scheme", "Validate an amplicon scheme for compliance with ARTIC standards");
-    CLI::App* vcfFilterCmd = app.add_subcommand("vcf_filter", "Filter a VCF file based on primer scheme info and user-defined cut offs");
+    CLI::App* vcfFilterCmd = app.add_subcommand("check_vcf", "Check a VCF file based on primer scheme info and user-defined cut offs");
 
     // add softmask options and flags
     std::string bamFile;
@@ -57,10 +58,16 @@ int main(int argc, char** argv)
     validatorCmd->add_option("--schemeVersion", primerSchemeVersion, "The ARTIC primer scheme version (default = 3)");
 
     // add vcfFilter options and flags
-    std::string vcfFile;
+    std::string vcfIn;
+    std::string vcfOut;
+    bool noLog = false;
+    bool dropPrimerVars = false;
     vcfFilterCmd->add_option("scheme", primerSchemeFile, "The primer scheme to use")->required()->check(CLI::ExistingFile);
-    vcfFilterCmd->add_option("vcf", vcfFile, "The input VCF file to filter")->required()->check(CLI::ExistingFile);
+    vcfFilterCmd->add_option("vcf", vcfIn, "The input VCF file to filter")->required()->check(CLI::ExistingFile);
     vcfFilterCmd->add_option("--schemeVersion", primerSchemeVersion, "The ARTIC primer scheme version (default = 3)");
+    vcfFilterCmd->add_option("-o,--vcfOut", vcfOut, "If provided, will write variants that pass checks");
+    vcfFilterCmd->add_flag("--noLog", noLog, "Will not print checking information to STDERR");
+    vcfFilterCmd->add_flag("--dropPrimerVars", dropPrimerVars, "Will drop variants called within primer regions for the pool");
 
     // add the softmask callback
     softmaskCmd->callback([&]() {
@@ -93,7 +100,9 @@ int main(int argc, char** argv)
         // load and check the primer scheme
         artic::PrimerScheme ps = artic::PrimerScheme(primerSchemeFile, primerSchemeVersion);
 
-        std::cout << "filter called" << std::endl;
+        // setup and run the softmasker
+        auto filter = artic::VcfChecker(&ps, vcfIn, vcfOut, dropPrimerVars);
+        filter.Run(noLog);
     });
 
     // parse CLI

@@ -22,12 +22,12 @@ Example usage:
 artic-tools validate_scheme primerscheme.bed
 ```
 
-## vcf_filter
+## check_vcf
 
-The `vcf_filter` command is used to check a VCF file and filter variants into PASS and FAIL VCF files.
+The `check_vcf` command is used to check a VCF file and filter variants into PASS and FAIL VCF files.
 
 Example usage:
 
 ```
-artic-tools vcf_filter primerscheme.bed in.vcf
+artic-tools check_vcf primerscheme.bed in.vcf
 ```
