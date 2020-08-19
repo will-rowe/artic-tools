@@ -5,7 +5,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include <sul/dynamic_bitset.hpp>
+#include <boost/dynamic_bitset.hpp>
 
 namespace artic
 {
@@ -139,8 +139,8 @@ namespace artic
         schemeMap _rPrimers;                                            // the reverse primers for the scheme
         std::vector<std::pair<int64_t, std::string>> _fPrimerLocations; // the start position and primerID of each forward primer in the scheme
         std::vector<std::pair<int64_t, std::string>> _rPrimerLocations; // the end position and primerID of each reverse primer in the scheme
-        sul::dynamic_bitset<> _ampliconOverlaps;                        // bit vector encoding all the overlap positions in the scheme
-        sul::dynamic_bitset<> _primerSites;                             // primer sites, stored in a bit vector and offset by primer pool ID
+        boost::dynamic_bitset<> _ampliconOverlaps;                      // bit vector encoding all the overlap positions in the scheme
+        boost::dynamic_bitset<> _primerSites;                           // primer sites, stored in a bit vector and offset by primer pool ID
         //std::unordered_map<std::string, Amplicon> _amplicons;         // the expected amplicons produced by the scheme
     };
 

@@ -88,11 +88,14 @@ endif()
 set(ARTIC_INCLUDE_DIRS ${HTS_INCLUDE_DIR} ${ARTIC_INCLUDE_DIRS})
 set(ARTIC_LINK_LIBRARIES ${HTS_LIB} ${ARTIC_LINK_LIBRARIES})
 
-# cli11, bitset, spdlog
-set(DYNAMICBITSET_USE_LIBPOPCNT ON)
-set(DYNAMICBITSET_USE_LIBPOPCNT_SUBMODULE ON)
+# boost (dynamic bitset)
+set(Boost_USE_STATIC_LIBS OFF) 
+set(Boost_USE_MULTITHREADED ON)  
+set(Boost_USE_STATIC_RUNTIME OFF) 
+find_package(Boost 1.45.0 REQUIRED) 
+
+# cli11, spdlog
 add_subdirectory(extlibs/CLI11)
-add_subdirectory(extlibs/dynamic_bitset)
 add_subdirectory(extlibs/spdlog)
 
 # rapidcsv
