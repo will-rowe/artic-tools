@@ -136,9 +136,13 @@ TEST(primerscheme, primersites)
         EXPECT_STREQ("query position outside of primer scheme bounds", err.what());
     }
 
-    // basic check for primer sites
-    primerSite = ps.CheckPrimerSite(40, pool1);
-    ASSERT_TRUE(primerSite);
-    primerSite = ps.CheckPrimerSite(40, pool2);
-    ASSERT_FALSE(primerSite);
+    // basic check for primer sites (should detect nCoV-2019_4_LEFT)
+    for (int64_t pos = 943; pos < 1311; pos++)
+    {
+        primerSite = ps.CheckPrimerSite(pos, pool2);
+        if (pos < 965)
+            ASSERT_TRUE(primerSite);
+        else
+            ASSERT_FALSE(primerSite);
+    }
 }

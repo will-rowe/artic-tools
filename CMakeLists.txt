@@ -91,7 +91,6 @@ set(ARTIC_LINK_LIBRARIES ${HTS_LIB} ${ARTIC_LINK_LIBRARIES})
 # cli11, bitset, spdlog
 set(DYNAMICBITSET_USE_LIBPOPCNT ON)
 set(DYNAMICBITSET_USE_LIBPOPCNT_SUBMODULE ON)
-set(DYNAMICBITSET_BUILD_TESTS OFF)
 add_subdirectory(extlibs/CLI11)
 add_subdirectory(extlibs/dynamic_bitset)
 add_subdirectory(extlibs/spdlog)

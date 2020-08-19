@@ -138,16 +138,11 @@ artic::PrimerScheme::PrimerScheme(const std::string inputFile, unsigned int sche
         {
             // store the primer pool name
             _primerPools.emplace_back(row[4]);
-
-            // add a bit vector for storing pool primer locations
-            _primerSites.emplace_back(sul::dynamic_bitset());
-
-            // get the pool ID for the new pool name
             poolID = _primerPools.size() - 1;
         }
 
         // try converting the primer scheme row into a primer object
-        Primer* primer;
+        Primer* primer = 0;
         try
         {
             primer = new Primer(std::stoi(row[1]), std::stoi(row[2]), row[3], poolID);
@@ -319,7 +314,7 @@ bool artic::PrimerScheme::CheckPrimerSite(int64_t pos, const std::string& poolNa
     if ((_refStart > pos) || (_refEnd < pos))
         throw std::runtime_error("query position outside of primer scheme bounds");
     auto poolID = GetPrimerPoolID(poolName);
-    return _primerSites.at(poolID).test(pos);
+    return _primerSites.test(pos + (_refEnd * poolID));
 }
 
 // _checkScheme will check all forward primers have a paired reverse primer and record some primer scheme stats.
@@ -368,7 +363,7 @@ void artic::PrimerScheme::_checkScheme(void)
     _refEnd = _rPrimerLocations.back().first;
 
     // store the primer overlap regions
-    _ampliconOverlaps.resize(_refEnd - _refStart, 0);
+    _ampliconOverlaps.resize(_refEnd, 0);
     for (unsigned int i = 0; i < _numAmplicons - 1; i++)
     {
         if (_fPrimerLocations.at(i + 1).first < _rPrimerLocations.at(i).first)
@@ -384,18 +379,18 @@ void artic::PrimerScheme::_checkScheme(void)
     }
 
     // store the primer sites per pool
+    _primerSites.resize((_refEnd * _primerPools.size()), 0);
     for (size_t poolID = 0; poolID < _primerPools.size(); ++poolID)
     {
-        _primerSites.at(poolID).resize(_refEnd - _refStart, 0);
         for (auto const& primer : _fPrimers)
         {
             if (primer.second->GetPrimerPoolID() == poolID)
-                _primerSites.at(poolID).set(primer.second->GetStart(), primer.second->GetLen(), 1);
+                _primerSites.set((primer.second->GetStart() + (_refEnd * poolID)), primer.second->GetLen(), 1);
         }
         for (auto const& primer : _rPrimers)
         {
             if (primer.second->GetPrimerPoolID() == poolID)
-                _primerSites.at(poolID).set(primer.second->GetEnd(), primer.second->GetLen(), 1);
+                _primerSites.set((primer.second->GetEnd() + (_refEnd * poolID)), primer.second->GetLen(), 1);
         }
     }
 }

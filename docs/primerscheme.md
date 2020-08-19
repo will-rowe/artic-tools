@@ -2,6 +2,8 @@
 
 Supported primer schemes are found in the [ARTIC repos](https://github.com/artic-network).
 
+Primer schemes are in BED format and `0-based, half-open`!
+
 This doc page is a work in progress...
 
 ## Primer processing
