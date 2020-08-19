@@ -33,8 +33,8 @@ project(ARTIC)
 # set the variables
 set(ARTIC_PROG_NAME artic-tools)
 set(ARTIC_VERSION_MAJOR 0)
-set(ARTIC_VERSION_MINOR 1)
-set(ARTIC_VERSION_PATCH 2)
+set(ARTIC_VERSION_MINOR 2)
+set(ARTIC_VERSION_PATCH 0)
 configure_file (
     "${PROJECT_SOURCE_DIR}/artic/version.hpp.in"
     "${PROJECT_SOURCE_DIR}/artic/version.hpp"
