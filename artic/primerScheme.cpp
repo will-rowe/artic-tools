@@ -363,7 +363,8 @@ void artic::PrimerScheme::_checkScheme(void)
     _refEnd = _rPrimerLocations.back().first;
 
     // store the primer overlap regions
-    _ampliconOverlaps.resize(_refEnd, 0);
+    for (auto i = 0; i < _refEnd; ++i)
+        _ampliconOverlaps.push_back(0);
     for (unsigned int i = 0; i < _numAmplicons - 1; i++)
     {
         if (_fPrimerLocations.at(i + 1).first < _rPrimerLocations.at(i).first)
@@ -379,7 +380,8 @@ void artic::PrimerScheme::_checkScheme(void)
     }
 
     // store the primer sites per pool
-    _primerSites.resize((_refEnd * _primerPools.size()), 0);
+    for (uint64_t i = 0; i < (_refEnd * _primerPools.size()); ++i)
+        _primerSites.push_back(0);
     for (size_t poolID = 0; poolID < _primerPools.size(); ++poolID)
     {
         for (auto const& primer : _fPrimers)
