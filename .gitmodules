@@ -10,12 +10,6 @@
 [submodule "extlibs/spdlog"]
 	path = extlibs/spdlog
 	url = https://github.com/gabime/spdlog.git
-[submodule "extlibs/dynamic_bitset"]
-	path = extlibs/dynamic_bitset
-	url = https://github.com/pinam45/dynamic_bitset
-[submodule "extlibs/libpopcnt"]
-	path = extlibs/libpopcnt
-	url = https://github.com/kimwalisch/libpopcnt
 [submodule "extlibs/CLI11"]
 	path = extlibs/CLI11
 	url = https://github.com/CLIUtils/CLI11.git
