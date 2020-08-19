@@ -363,15 +363,13 @@ void artic::PrimerScheme::_checkScheme(void)
     _refEnd = _rPrimerLocations.back().first;
 
     // store the primer overlap regions
-    for (auto i = 0; i < _refEnd; ++i)
-        _ampliconOverlaps.push_back(0);
+    _ampliconOverlaps.resize(_refEnd, 0);
     for (unsigned int i = 0; i < _numAmplicons - 1; i++)
     {
         if (_fPrimerLocations.at(i + 1).first < _rPrimerLocations.at(i).first)
         {
-            auto start = _fPrimerLocations.at(i + 1).first;
-            auto len = _rPrimerLocations.at(i).first - start;
-            _ampliconOverlaps.set(start, len, 1);
+            for (auto bitSetter = _fPrimerLocations.at(i + 1).first; bitSetter < _rPrimerLocations.at(i).first; bitSetter++)
+                _ampliconOverlaps[bitSetter] = 1;
         }
         else
         {
@@ -380,19 +378,25 @@ void artic::PrimerScheme::_checkScheme(void)
     }
 
     // store the primer sites per pool
-    for (uint64_t i = 0; i < (_refEnd * _primerPools.size()); ++i)
-        _primerSites.push_back(0);
+    _primerSites.resize(_refEnd * _primerPools.size(), 0);
     for (size_t poolID = 0; poolID < _primerPools.size(); ++poolID)
     {
         for (auto const& primer : _fPrimers)
         {
             if (primer.second->GetPrimerPoolID() == poolID)
-                _primerSites.set((primer.second->GetStart() + (_refEnd * poolID)), primer.second->GetLen(), 1);
+            {
+
+                for (auto bitSetter = (primer.second->GetStart() + (_refEnd * poolID)); bitSetter < (primer.second->GetEnd() + (_refEnd * poolID)); bitSetter++)
+                    _primerSites[bitSetter] = 1;
+            }
         }
         for (auto const& primer : _rPrimers)
         {
             if (primer.second->GetPrimerPoolID() == poolID)
-                _primerSites.set((primer.second->GetEnd() + (_refEnd * poolID)), primer.second->GetLen(), 1);
+            {
+                for (auto bitSetter = (primer.second->GetEnd() + (_refEnd * poolID)); bitSetter < (primer.second->GetStart() + (_refEnd * poolID)); bitSetter++)
+                    _primerSites[bitSetter] = 1;
+            }
         }
     }
 }
