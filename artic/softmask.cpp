@@ -170,7 +170,7 @@ artic::Softmasker::~Softmasker(void)
 // Run will perform the softmasking on the open BAM file.
 void artic::Softmasker::Run(bool verbose)
 {
-    artic::Log::Init();
+    artic::Log::Init("softmasker");
     LOG_INFO("starting softmasking");
     if (_maskPrimerStart)
         LOG_INFO("include primers in softmask: true");

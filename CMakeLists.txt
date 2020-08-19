@@ -88,18 +88,22 @@ endif()
 set(ARTIC_INCLUDE_DIRS ${HTS_INCLUDE_DIR} ${ARTIC_INCLUDE_DIRS})
 set(ARTIC_LINK_LIBRARIES ${HTS_LIB} ${ARTIC_LINK_LIBRARIES})
 
-# cli11
-add_subdirectory(extlib/cli11)
+# boost (dynamic bitset)
+set(Boost_USE_STATIC_LIBS OFF) 
+set(Boost_USE_MULTITHREADED ON)  
+set(Boost_USE_STATIC_RUNTIME OFF) 
+find_package(Boost 1.45.0 REQUIRED) 
 
-# spdlog
-add_subdirectory(extlib/spdlog)
+# cli11, spdlog
+add_subdirectory(extlibs/CLI11)
+add_subdirectory(extlibs/spdlog)
 
 # rapidcsv
-include_directories(${PROJECT_SOURCE_DIR}/extlib/rapidcsv/src)
+include_directories(${PROJECT_SOURCE_DIR}/extlibs/rapidcsv/src)
 
 # google test
 if(BUILD_TESTING)
-    add_subdirectory(extlib/googletest)
+    add_subdirectory(extlibs/googletest)
     include(GoogleTest)
 endif(BUILD_TESTING)
 

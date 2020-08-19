@@ -5,7 +5,7 @@
 #include <htslib/sam.h>
 #include <string>
 
-#include <artic/primerScheme.hpp>
+#include "primerScheme.hpp"
 
 namespace artic
 {

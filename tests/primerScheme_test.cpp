@@ -7,10 +7,12 @@ using namespace artic;
 
 // some test parameters
 const unsigned int version = 3;
-const unsigned int numPools = 3; // includes "unmatched"
+const unsigned int numPools = 2;
 const unsigned int numPrimers = 218;
 const unsigned int numAlts = 22;
 const unsigned int numAmplicons = 98;
+const std::string pool1 = "nCoV-2019_1";
+const std::string pool2 = "nCoV-2019_2";
 
 const std::string inputScheme = std::string(TEST_DATA_PATH) + "SCoV2.scheme.v3.bed";
 
@@ -75,23 +77,6 @@ TEST(primerscheme, access)
 {
     auto ps = artic::PrimerScheme(inputScheme, 3);
 
-    // check that you can't search for primers outside the scheme bounds
-    /*
-    try
-    {
-        ps.FindPrimers(0, 1000000);
-        FAIL() << "expected a scheme bounds error";
-    }
-    catch (std::runtime_error& err)
-    {
-        EXPECT_EQ(err.what(), std::string("alignment is outside of available primer scheme bounds"));
-    }
-    catch (...)
-    {
-        FAIL() << "expected std::runtime_error";
-    }
-    */
-
     // get a couple of primer pairs and check if they are properly paired etc.
     try
     {
@@ -99,7 +84,13 @@ TEST(primerscheme, access)
         auto id = pp.GetID();
         ASSERT_TRUE(pp.IsProperlyPaired());
         EXPECT_EQ(id, std::string("nCoV-2019_1_LEFT_nCoV-2019_1_RIGHT"));
-        EXPECT_EQ(pp.GetPrimerPool(), std::string("nCoV-2019_1"));
+
+        // make sure pool names and IDs match up between primers and the scheme
+        auto poolName = pp.GetPrimerPool();
+        auto retPoolID = ps.GetPrimerPoolID(poolName);
+        auto retPoolName = ps.GetPrimerPool(retPoolID);
+        EXPECT_EQ(pp.GetPrimerPool(), pool1);
+        EXPECT_EQ(retPoolName, pool1);
 
         auto pp2 = ps.FindPrimers(4046, 4450);
         auto id2 = pp2.GetID();
@@ -107,7 +98,7 @@ TEST(primerscheme, access)
         std::cout << id2 << std::endl;
         ASSERT_TRUE(pp2.IsProperlyPaired());
         EXPECT_EQ(id2, std::string("nCoV-2019_14_LEFT_nCoV-2019_14_RIGHT"));
-        EXPECT_EQ(pp2.GetPrimerPool(), std::string("nCoV-2019_2"));
+        EXPECT_EQ(pp2.GetPrimerPool(), pool2);
         EXPECT_EQ(span.first, 4044);
         EXPECT_EQ(span.second, 4450);
     }
@@ -125,10 +116,33 @@ TEST(primerscheme, access)
     {
         FAIL() << "runtime error: " << err.what();
     }
-
     auto primerPools = ps.GetPrimerPools();
-    for (auto const& pool : primerPools)
+    EXPECT_EQ(primerPools.size(), 2);
+}
+
+// primer sites
+TEST(primerscheme, primersites)
+{
+    auto ps = artic::PrimerScheme(inputScheme, 3);
+    bool primerSite;
+
+    // check out of bounds
+    try
     {
-        std::cout << "pool: " << pool << std::endl;
+        primerSite = ps.CheckPrimerSite(0, pool1);
+    }
+    catch (std::runtime_error& err)
+    {
+        EXPECT_STREQ("query position outside of primer scheme bounds", err.what());
+    }
+
+    // basic check for primer sites (should detect nCoV-2019_4_LEFT)
+    for (int64_t pos = 943; pos < 1311; pos++)
+    {
+        primerSite = ps.CheckPrimerSite(pos, pool2);
+        if (pos < 965)
+            ASSERT_TRUE(primerSite);
+        else
+            ASSERT_FALSE(primerSite);
     }
 }

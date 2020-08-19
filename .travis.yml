@@ -16,6 +16,7 @@ jobs:
           packages:
             - clang-10
             - libstdc++-7-dev
+            - libboost-all-dev
       env: ["CXX=clang++-10", "CC=clang-10"]
 
     - os: linux
@@ -30,11 +31,12 @@ jobs:
           packages:
             - g++-10
             - libstdc++-7-dev
+            - libboost-all-dev
       env: ["CXX=g++-10", "CC=gcc-10"]
 
     - os: osx
       name: "osx"
-      osx_image: xcode9.4
+      osx_image: xcode10
       env: ["CXX=clang++", "XCODE_VERSION=11.3.1"]
 
 install:
@@ -42,7 +44,7 @@ install:
   - git submodule update --init --recursive
 
   # install htslib
-  - pushd extlib/htslib
+  - pushd extlibs/htslib
   - autoheader && autoconf && sudo make && sudo make install
   - popd
 
