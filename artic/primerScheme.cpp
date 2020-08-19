@@ -2,11 +2,11 @@
 #include <cmath>
 #include <fstream>
 #include <iostream>
+#include <rapidcsv.h>
 #include <stdexcept>
 #include <string>
 
 #include "primerScheme.hpp"
-#include "rapidcsv.h"
 
 // some useful tags
 const std::string tag_leftPrimer = "_LEFT";
@@ -63,13 +63,13 @@ void artic::Primer::MergeAlt(const Primer& alt)
 unsigned int artic::Primer::GetNumAlts(void) { return _numAlts; }
 
 // GetStart returns the primer start.
-int64_t artic::Primer::GetStart(void) { return _start; }
+int64_t artic::Primer::GetStart(void) const { return _start; }
 
 // GetEnd returns the primer end.
-int64_t artic::Primer::GetEnd(void) { return _end; }
+int64_t artic::Primer::GetEnd(void) const { return _end; }
 
 // GetLen returns the length of the primer sequence.
-unsigned int artic::Primer::GetLen(void) { return _end - _start; }
+unsigned int artic::Primer::GetLen(void) const { return _end - _start; }
 
 // GetID returns the primerID.
 const std::string& artic::Primer::GetID(void) const { return _primerID; }
@@ -82,6 +82,25 @@ size_t artic::Primer::GetPrimerPoolID(void) const { return _poolID; }
 
 // IsForward returns the primer direction (true = forward, false = reverse).
 bool artic::Primer::IsForward(void) { return _isForward; }
+
+// GetSeq returns the primer sequence from a reference.
+const std::string artic::Primer::GetSeq(faidx_t* reference, const std::string& refID) const
+{
+    if (!reference)
+        throw std::runtime_error("no reference provided (indexed fasta)");
+    int len;
+    char* seq = faidx_fetch_seq(
+        reference,
+        refID.c_str(),
+        _start,
+        _end - 1,
+        &len);
+    if (seq == NULL)
+        throw std::runtime_error("cannot fetch the reference sequence");
+    if (len != int(GetLen()))
+        throw std::runtime_error("did not fetch correct number of primer bases (got " + std::to_string(len) + ")");
+    return seq;
+}
 
 // PrimerScheme constructor.
 artic::PrimerScheme::PrimerScheme(const std::string inputFile, unsigned int schemeVersion)
@@ -216,8 +235,8 @@ artic::PrimerScheme::~PrimerScheme(void)
 // GetVersion returns the primer scheme version.
 unsigned int artic::PrimerScheme::GetVersion(void) { return _version; }
 
-// GetReferenceID returns the reference sequence ID found in the primer scheme.
-const std::string& artic::PrimerScheme::GetReferenceID(void) const { return _referenceID; }
+// GetReferenceName returns the reference sequence ID found in the primer scheme.
+const std::string& artic::PrimerScheme::GetReferenceName(void) const { return _referenceID; }
 
 // GetNumPrimers returns the number of primers in the primer scheme.
 unsigned int artic::PrimerScheme::GetNumPrimers(void) { return _numPrimers; }

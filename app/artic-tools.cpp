@@ -84,7 +84,7 @@ int main(int argc, char** argv)
         artic::PrimerScheme ps = artic::PrimerScheme(primerSchemeFile, primerSchemeVersion);
         std::cout << "primer scheme file:\t" << primerSchemeFile << std::endl;
         std::cout << "primer scheme version:\t" << ps.GetVersion() << std::endl;
-        std::cout << "reference sequence ID:\t" << ps.GetReferenceID() << std::endl;
+        std::cout << "reference sequence ID:\t" << ps.GetReferenceName() << std::endl;
         auto pools = ps.GetPrimerPools();
         std::cout << "number of pools:\t" << pools.size() << std::endl;
         std::cout << "number of primers:\t" << ps.GetNumPrimers() << " (includes " << ps.GetNumAlts() << " alts)" << std::endl;

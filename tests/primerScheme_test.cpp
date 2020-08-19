@@ -13,7 +13,7 @@ const unsigned int numAlts = 22;
 const unsigned int numAmplicons = 98;
 const std::string pool1 = "nCoV-2019_1";
 const std::string pool2 = "nCoV-2019_2";
-
+const std::string reference = std::string(TEST_DATA_PATH) + "SCoV2.reference.fasta";
 const std::string inputScheme = std::string(TEST_DATA_PATH) + "SCoV2.scheme.v3.bed";
 
 // scheme constructor
@@ -145,4 +145,16 @@ TEST(primerscheme, primersites)
         else
             ASSERT_FALSE(primerSite);
     }
+}
+
+// primer sequence
+TEST(primerscheme, primerseq)
+{
+    auto ps = artic::PrimerScheme(inputScheme, 3);
+    auto pp = ps.FindPrimers(40, 400);
+    auto p1 = pp.GetForwardPrimer();
+    faidx_t* fai = fai_load(reference.c_str());
+    auto seq = p1->GetSeq(fai, ps.GetReferenceName());
+    EXPECT_EQ(seq.size(), p1->GetLen());
+    EXPECT_STREQ("ACCAACCAACTTTCGATCTCTTGT", seq.c_str());
 }

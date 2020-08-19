@@ -1,11 +1,11 @@
 #ifndef PRIMERSCHEME_H
 #define PRIMERSCHEME_H
 
+#include <boost/dynamic_bitset.hpp>
+#include <htslib/faidx.h>
 #include <string>
 #include <unordered_map>
 #include <vector>
-
-#include <boost/dynamic_bitset.hpp>
 
 namespace artic
 {
@@ -35,13 +35,13 @@ namespace artic
         unsigned int GetNumAlts(void);
 
         // GetStart returns the primer start.
-        int64_t GetStart(void);
+        int64_t GetStart(void) const;
 
         // GetEnd returns the primer end.
-        int64_t GetEnd(void);
+        int64_t GetEnd(void) const;
 
         // GetLen returns the length of the primer sequence.
-        unsigned int GetLen(void);
+        unsigned int GetLen(void) const;
 
         // GetID returns the primerID.
         const std::string& GetID(void) const;
@@ -54,6 +54,9 @@ namespace artic
 
         // IsForward returns the primer direction (true = forward, false = reverse).
         bool IsForward(void);
+
+        // GetSeq returns the primer sequence from a reference.
+        const std::string GetSeq(faidx_t* reference, const std::string& refID) const;
 
     private:
         int64_t _start;
@@ -81,8 +84,8 @@ namespace artic
         // GetVersion returns the ARTIC primer scheme version (1/2/3).
         unsigned int GetVersion(void);
 
-        // GetReferenceID returns the reference sequence ID found in the primer scheme.
-        const std::string& GetReferenceID(void) const;
+        // GetReferenceName returns the reference sequence ID found in the primer scheme.
+        const std::string& GetReferenceName(void) const;
 
         // GetNumPrimers returns the total number of primers in the scheme.
         unsigned int GetNumPrimers(void);
@@ -168,10 +171,10 @@ namespace artic
         // GetMinSpan returns the start and end of the amplicon, excluding the primer sequence.
         std::pair<int64_t, int64_t> GetMinSpan(void);
 
-        // GetForwardPrimer returns a reference to the forward primer in the amplicon.
+        // GetForwardPrimer returns a pointer to the forward primer in the amplicon.
         const Primer* GetForwardPrimer(void);
 
-        // GetReversePrimer returns a reference to the reverse primer in the amplicon.
+        // GetReversePrimer returns a pointer to the reverse primer in the amplicon.
         const Primer* GetReversePrimer(void);
 
     private:

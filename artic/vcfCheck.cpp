@@ -86,7 +86,7 @@ void artic::VcfChecker::Run()
 
         // check var reference is in primer scheme
         std::string refID = bcf_hdr_id2name(_vcfHeader, _curRec->rid);
-        if (refID != _primerScheme->GetReferenceID())
+        if (refID != _primerScheme->GetReferenceName())
         {
             LOG_ERROR("\tdropping - reference ID does not match primer scheme reference ({})", refID);
             continue;
