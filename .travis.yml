@@ -16,6 +16,7 @@ jobs:
           packages:
             - clang-10
             - libstdc++-7-dev
+            - libboost-all-dev
       env: ["CXX=clang++-10", "CC=clang-10"]
 
     - os: linux
@@ -30,6 +31,7 @@ jobs:
           packages:
             - g++-10
             - libstdc++-7-dev
+            - libboost-all-dev
       env: ["CXX=g++-10", "CC=gcc-10"]
 
     - os: osx
