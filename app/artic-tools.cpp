@@ -60,14 +60,14 @@ int main(int argc, char** argv)
     // add vcfFilter options and flags
     std::string vcfIn;
     std::string vcfOut;
-    bool noLog = false;
     bool dropPrimerVars = false;
+    bool dropOverlapFails = false;
     vcfFilterCmd->add_option("scheme", primerSchemeFile, "The primer scheme to use")->required()->check(CLI::ExistingFile);
     vcfFilterCmd->add_option("vcf", vcfIn, "The input VCF file to filter")->required()->check(CLI::ExistingFile);
     vcfFilterCmd->add_option("--schemeVersion", primerSchemeVersion, "The ARTIC primer scheme version (default = 3)");
     vcfFilterCmd->add_option("-o,--vcfOut", vcfOut, "If provided, will write variants that pass checks");
-    vcfFilterCmd->add_flag("--noLog", noLog, "Will not print checking information to STDERR");
     vcfFilterCmd->add_flag("--dropPrimerVars", dropPrimerVars, "Will drop variants called within primer regions for the pool");
+    vcfFilterCmd->add_flag("--dropOverlapFails", dropOverlapFails, "Will drop variants called once within amplicon overlap regions");
 
     // add the softmask callback
     softmaskCmd->callback([&]() {
@@ -101,8 +101,8 @@ int main(int argc, char** argv)
         artic::PrimerScheme ps = artic::PrimerScheme(primerSchemeFile, primerSchemeVersion);
 
         // setup and run the softmasker
-        auto filter = artic::VcfChecker(&ps, vcfIn, vcfOut, dropPrimerVars);
-        filter.Run(noLog);
+        auto filter = artic::VcfChecker(&ps, vcfIn, vcfOut, dropPrimerVars, dropOverlapFails);
+        filter.Run();
     });
 
     // parse CLI

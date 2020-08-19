@@ -15,11 +15,11 @@ namespace artic
     {
     public:
         // VcfChecker constructor and destructor.
-        VcfChecker(artic::PrimerScheme* primerScheme, const std::string& vcfIn, const std::string& vcfOut, bool dropPrimerVars);
+        VcfChecker(artic::PrimerScheme* primerScheme, const std::string& vcfIn, const std::string& vcfOut, bool dropPrimerVars, bool dropOverlapFails);
         ~VcfChecker(void);
 
         // Run will perform the filtering on the open VCF file.
-        void Run(bool noLog);
+        void Run();
 
     private:
         // data holders
@@ -29,9 +29,12 @@ namespace artic
         bcf1_t* _curRec;                    // the current VCF record being processed
         std::string _outfileName;           // the filename for the output VCF
         vcfFile* _outputVCF;                // the output VCF
+        bool _dupCheck;                     // true if there is a record available for duplicate checking
+        bcf1_t* _recHolder;                 // used to keep rec in amplicon overlap regions for checking next record
 
         // user parameters
-        bool _dropPrimerVars; // drop variants within primer sequence for the called pool
+        bool _dropPrimerVars;   // drop variants within primer sequence for the called pool
+        bool _dropOverlapFails; // drop variants found once within amplicon overlap regions
         //unsigned int _minQual; // the QUAL threshold for keeping records
 
         // counters

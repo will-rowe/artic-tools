@@ -10,7 +10,7 @@ conda install -c bioconda artic-tools
 
 ## Source
 
-`artic-tools` requires CMake, HTSlib and a C++17 compiler.
+`artic-tools` requires CMake, Boost, HTSlib and a C++17 compiler.
 
 ```
 git clone --recursive https://github.com/will-rowe/artic-tools.git

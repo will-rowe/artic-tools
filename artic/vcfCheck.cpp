@@ -6,8 +6,8 @@
 #include "version.hpp"
 
 // VcfChecker constructor.
-artic::VcfChecker::VcfChecker(artic::PrimerScheme* primerScheme, const std::string& vcfIn, const std::string& vcfOut, bool dropPrimerVars)
-    : _primerScheme(primerScheme), _outfileName(vcfOut), _dropPrimerVars(dropPrimerVars)
+artic::VcfChecker::VcfChecker(artic::PrimerScheme* primerScheme, const std::string& vcfIn, const std::string& vcfOut, bool dropPrimerVars, bool dropOverlapFails)
+    : _primerScheme(primerScheme), _outfileName(vcfOut), _dropPrimerVars(dropPrimerVars), _dropOverlapFails(dropOverlapFails)
 {
     // get the input VCF ready
     _inputVCF = bcf_open(vcfIn.c_str(), "r");
@@ -17,6 +17,8 @@ artic::VcfChecker::VcfChecker(artic::PrimerScheme* primerScheme, const std::stri
     if (!_vcfHeader)
         throw std::runtime_error("unable to read VCF header");
     _curRec = bcf_init();
+    _dupCheck = false;
+    _recHolder = bcf_init();
 
     // zero counters
     _recordCounter = 0;
@@ -34,16 +36,27 @@ artic::VcfChecker::~VcfChecker(void)
         bcf_hdr_destroy(_vcfHeader);
     if (_curRec)
         bcf_destroy(_curRec);
+    if (_recHolder)
+        bcf_destroy(_recHolder);
 }
 
 // Run will perform the softmasking on the open BAM file.
-void artic::VcfChecker::Run(bool noLog)
+void artic::VcfChecker::Run()
 {
-    if (!noLog)
+
+    artic::Log::Init("vcfchecker");
+    LOG_TRACE("starting VCF checker");
+    if ((_outfileName.size() != 0))
     {
-        artic::Log::Init("vcfchecker");
-        LOG_INFO("starting VCF checker");
+        LOG_TRACE("\tfiltering variants: true");
+        LOG_TRACE("\toutput file: {}", _outfileName);
     }
+    else
+    {
+        LOG_TRACE("\tfiltering variants: false");
+    }
+    LOG_TRACE("\tdiscard primer site vars: {}", _dropPrimerVars);
+    LOG_TRACE("\tdiscard overlap fail vars: {}", _dropOverlapFails);
 
     // get the output file ready if neeeded
     if ((_outfileName.size() != 0))
@@ -51,10 +64,6 @@ void artic::VcfChecker::Run(bool noLog)
         _outputVCF = bcf_open(_outfileName.c_str(), "w");
         if (!_outputVCF)
             throw std::runtime_error("unable to open VCF file for writing");
-        if (!noLog)
-            LOG_INFO("writing variants passing checks to {}", _outfileName);
-
-        // add prog info and copy the header
         std::string progLine = "##" + PROG_NAME + "_version=" + artic::GetVersion();
         bcf_hdr_append(_vcfHeader, progLine.c_str());
         if (bcf_hdr_write(_outputVCF, _vcfHeader) < 0)
@@ -69,22 +78,16 @@ void artic::VcfChecker::Run(bool noLog)
     // iterate VCF file
     while (bcf_read(_inputVCF, _vcfHeader, _curRec) == 0)
     {
+        bcf_unpack(_curRec, BCF_UN_STR);
         _recordCounter++;
+        auto adjustedPos = _curRec->pos + 1;
+        LOG_TRACE("variant at pos {}: {}->{}", adjustedPos, _curRec->d.allele[0], _curRec->d.allele[1]);
 
         // check var reference is in primer scheme
         std::string refID = bcf_hdr_id2name(_vcfHeader, _curRec->rid);
         if (refID != _primerScheme->GetReferenceID())
         {
-            if (!noLog)
-                LOG_WARN("skipping, variant reference ID does not match primer scheme reference - {}", refID);
-            continue;
-        }
-
-        // check var position is in scheme bounds
-        if (_curRec->pos < _primerScheme->GetRefStart() || _curRec->pos > _primerScheme->GetRefEnd())
-        {
-            if (!noLog)
-                LOG_WARN("skipping, variant outside of scheme bounds - {} at {}", _curRec->d.allele[1], _curRec->pos);
+            LOG_ERROR("\tdropping - reference ID does not match primer scheme reference ({})", refID);
             continue;
         }
 
@@ -92,54 +95,83 @@ void artic::VcfChecker::Run(bool noLog)
         bcf_get_info_string(_vcfHeader, _curRec, "Pool", &dst, &ndst);
         if (ndst == 0)
         {
-            if (!noLog)
-                LOG_WARN("skipping, no pool information for variant at {}", _curRec->pos);
+            LOG_ERROR("\tdropping - no pool information provided");
             continue;
         }
         std::string pool(dst);
         std::vector<std::string>::iterator poolItr = std::find(primerPools.begin(), primerPools.end(), pool);
         if (poolItr == primerPools.end())
         {
-            if (!noLog)
-                LOG_WARN("skipping, pool not found in scheme - {}", dst);
+            LOG_ERROR("\tdropping - pool not found in scheme ({})", pool);
+            continue;
+        }
+
+        // check var position is in scheme bounds
+        if (_curRec->pos < _primerScheme->GetRefStart() || _curRec->pos > _primerScheme->GetRefEnd())
+        {
+            LOG_ERROR("\tdropping - outside of scheme bounds ({}:{})", _primerScheme->GetRefStart(), _primerScheme->GetRefEnd());
             continue;
         }
 
         // check if in primer site
         if (_primerScheme->CheckPrimerSite(_curRec->pos, pool))
         {
-            if (!noLog && _dropPrimerVars)
-                LOG_WARN("skipping, variant found within primer sequence - {}", _curRec->pos);
-            continue;
-            if (!noLog)
-                LOG_WARN("variant found within primer sequence - {}", _curRec->pos);
+            if (_dropPrimerVars)
+            {
+                LOG_ERROR("\tdropping - located within a primer sequence for the primer pool ({})", pool);
+                continue;
+            }
+            LOG_WARN("\tlocated within a primer sequence for the primer pool ({})", pool);
         }
 
         // check amplicon overlap
+        // todo: handle if multiple vars found at a pos but alleles are different?
+        // todo: merge identical vars in overlaps?
         if (_primerScheme->CheckAmpliconOverlap(_curRec->pos))
         {
-            if (!noLog)
-                LOG_WARN("variant found in scheme region with amplicon overlap - {}", _curRec->pos);
+            LOG_TRACE("\tlocated within an amplicon overlap region");
 
-            // add to a list and check concordance
+            // check if we've already seen an var in this overlap position
+            if (!_dupCheck)
+            {
+                LOG_TRACE("\tnothing seen at position yet, holding var");
+                _recHolder = bcf_dup(_curRec);
+                _dupCheck = true;
+                continue;
+            }
+            if (_curRec->pos != _recHolder->pos)
+            {
+                LOG_ERROR("\tvar pos does not match with that of previously identified overlap, holding var (and dropping held var at {})", _recHolder->pos);
+                bcf_empty(_recHolder);
+                _recHolder = bcf_dup(_curRec);
+                continue;
+            }
+
+            // otherwise, the write the record we had on hold and clear the holder
+            LOG_TRACE("\tmultiple copies of var found at pos {} in overlap region", adjustedPos);
+            if (_outfileName.size() != 0)
+                if (bcf_write(_outputVCF, _vcfHeader, _recHolder) < 0)
+                    throw std::runtime_error("could not write record");
+            _keepCounter++;
+            bcf_empty(_recHolder);
+            _dupCheck = false;
         }
-
         _keepCounter++;
-
-        // TODO: optional - add in depth, qual filters etc.
-        //bcf_unpack(_curRec, BCF_UN_STR);
-        //std::cout << _curRec->pos << " " << _curRec->rlen << " " << seqnames[_curRec->rid] << std::endl;
-        //LOG_INFO("variant okay: {} -> {} at {}", _curRec->d.allele[0], _curRec->d.allele[1], _curRec->pos);
+        if (_outfileName.size() != 0)
+            if (bcf_write(_outputVCF, _vcfHeader, _curRec) < 0)
+                throw std::runtime_error("could not write record");
     }
 
     // free holders
     if (dst)
         free(dst);
 
-    // print some stats
-    if (!noLog)
+    // finish up
+    LOG_TRACE("finished checking")
+    if (_dupCheck)
     {
-        LOG_INFO("{} variant records processed", _recordCounter);
-        LOG_INFO("{} variant records passed checks", _keepCounter);
+        LOG_ERROR("\tdropped var at {} which is in an amplicon overlap region but was only found once", _recHolder->pos);
     }
+    LOG_INFO("\t{} variant records processed", _recordCounter);
+    LOG_INFO("\t{} variant records passed checks", _keepCounter);
 }
