@@ -56,3 +56,6 @@ script:
   - make -j2
   - ../bin/artic-tools_tests
   - ../bin/artic-tools -v
+  - ../bin/artic-tools align_trim -h
+  - ../bin/artic-tools validate_scheme -h
+  - ../bin/artic-tools check_vcf -h

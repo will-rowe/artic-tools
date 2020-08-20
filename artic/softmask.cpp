@@ -203,7 +203,10 @@ void artic::Softmasker::Run(bool verbose)
         // add a primer pool readgroup to the alignment record based on the primer pairing
         // NOTE: primerscheme logic has already added "unmatched" as the primer pool if the FindPrimers method returns primers which are not properly paired
         if (!_noReadGroups)
-            bam_aux_append(_curRec, "RG", 'Z', _curAmplicon->GetPrimerPool().size() + 1, (uint8_t*)_curAmplicon->GetPrimerPool().c_str());
+        {
+            auto primerPool = _primerScheme->GetPrimerPool(_curAmplicon->GetPrimerPoolID());
+            bam_aux_append(_curRec, "RG", 'Z', primerPool.size() + 1, (uint8_t*)primerPool.c_str());
+        }
 
         if (_removeBadPairs && !_curAmplicon->IsProperlyPaired())
         {
