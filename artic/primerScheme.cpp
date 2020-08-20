@@ -168,15 +168,12 @@ unsigned int artic::PrimerScheme::GetNumAmplicons(void) { return _numAmplicons; 
 unsigned int artic::PrimerScheme::GetMeanAmpliconSpan(void) { return _meanAmpliconSpan; }
 
 // GetPrimerPools returns the primer pools found in the primer scheme.
-std::vector<std::string> artic::PrimerScheme::GetPrimerPools(void)
-{
-    return std::vector<std::string>(_primerPools.begin() + 1, _primerPools.end());
-}
+std::vector<std::string> artic::PrimerScheme::GetPrimerPools(void) { return std::vector<std::string>(_primerPools.begin() + 1, _primerPools.end()); }
 
 // GetPrimerPool returns the primer pool for the provided pool ID.
 const std::string& artic::PrimerScheme::GetPrimerPool(size_t poolID) const
 {
-    if (poolID < 0 || poolID >= _primerPools.size())
+    if (poolID >= _primerPools.size())
         throw std::runtime_error("poolID not found in scheme pools - " + std::to_string(poolID));
     return _primerPools.at(poolID);
 }
