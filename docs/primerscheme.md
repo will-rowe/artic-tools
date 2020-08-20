@@ -1,20 +1,28 @@
-# Primer Scheme
+# Primer Schemes
 
-Supported primer schemes are found in the [ARTIC repos](https://github.com/artic-network).
+Supported primer schemes are found in the [ARTIC repos](https://github.com/artic-network). They are in a derivative BED format where the first 4 columns are true to format and the 5th column is hijacked for providing primer pool information.
 
-Primer schemes are in BED format and `0-based, half-open`!
+This means that ARTIC primer schemes are in 4-column BED format (`0-based, half-open`) plus an extra column for primer pool!
 
-This doc page is a work in progress...
+Example:
+
+```
+MN908947.3      30      54      nCoV-2019_1_LEFT        nCoV-2019_1
+MN908947.3      385     410     nCoV-2019_1_RIGHT       nCoV-2019_1
+MN908947.3      320     342     nCoV-2019_2_LEFT        nCoV-2019_2
+MN908947.3      704     726     nCoV-2019_2_RIGHT       nCoV-2019_2
+....
+```
 
 ## Primer processing
 
 The following tags are required to exist at the end of the primer IDs:
 
-| tag    | meaning              |
-| ------ | -------------------- |
-| _LEFT  | the left primer      |
-| _RIGHT | the right primer     |
-| _alt   | the primer is an alt |
+| tag     | meaning              |
+| ------- | -------------------- |
+| \_LEFT  | the left primer      |
+| \_RIGHT | the right primer     |
+| \_alt   | the primer is an alt |
 
 For example:
 
@@ -32,29 +40,30 @@ A canonical primer ID is an ID where all tags have been removed. So in the above
 
 TODO: more info on primer processing logic
 
-
-## Scheme Validation
+## Scheme validation
 
 The primer schemes are read from file and validated.
 
 On reading from file, the following must be true:
 
-* file must exist and be readable
-* a recognised primer scheme version must be provided
-* must be TSV with correct column count correct for scheme version
-* must not contain multiple reference sequence IDs
-* each row must encode a primer (problem rows are flagged and validation fails after all rows are tried)
+- file must exist and be readable
+- a recognised primer scheme version must be provided
+- must be TSV with correct column count correct for scheme version
+- must not contain multiple reference sequence IDs
+- each row must encode a primer (problem rows are flagged and validation fails after all rows are tried)
 
 Once the file processed for primers, the following checks are made:
 
-* check there are primers in the scheme
-* check the number of forward primers match the number of reverse primers (this is **after** merging alts)
-* check forward and reverse primers make proper amplicons (based on shared canonical primer IDs)
-* check there are no gaps in the scheme
+- check there are primers in the scheme
+- check the number of forward primers match the number of reverse primers (this is **after** merging alts)
+- check forward and reverse primers make proper amplicons (based on shared canonical primer IDs)
+- check there are no gaps in the scheme
 
 The following information can be reported from the scheme:
 
-* number of pools, primers, amplicons etc.
-* mean amplicon size
-* the scheme span, with respect to the reference co-ordinates
-* the scheme amplicon overlaps (i.e. the proportion of the scheme span with >1 amplicon coverage)
+- number of pools, primers, amplicons etc.
+- mean amplicon size
+- the scheme span, with respect to the reference co-ordinates
+- the scheme amplicon overlaps (i.e. the proportion of the scheme span with >1 amplicon coverage)
+
+## Creating amplicons
