@@ -8,11 +8,13 @@
 
 #include "primerScheme.hpp"
 
-// some useful tags
-const std::string tag_leftPrimer = "_LEFT";
-const std::string tag_rightPrimer = "_RIGHT";
-const std::string tag_altPrimer = "_alt";
-const std::string Unmatched_Pool = "unmatched";
+// ARTIC scheme tags
+const std::string LEFT_PRIMER_TAG = "_LEFT";
+const std::string RIGHT_PRIMER_TAG = "_RIGHT";
+const std::string ALT_PRIMER_TAG = "_alt";
+const std::string NO_POOL = "unmatched";
+const unsigned int NUM_ARTIC_PRIMERS_v1_v2 = 196;
+const unsigned int NUM_ARTIC_PRIMERS_v3 = 218;
 
 // Primer constructor.
 artic::Primer::Primer(unsigned int start, unsigned int end, const std::string primerID, size_t poolID)
@@ -23,10 +25,12 @@ artic::Primer::Primer(unsigned int start, unsigned int end, const std::string pr
     // check the fields are valid and add the direction
     if (_primerID.empty())
         throw std::runtime_error("primer constructor received missing ID");
+    if (_start >= _end)
+        throw std::runtime_error("invalid primer start/end for primerID: " + _primerID);
 
     // add the direction, based on the primer ID
-    std::size_t left = primerID.find(tag_leftPrimer);
-    std::size_t right = primerID.find(tag_rightPrimer);
+    std::size_t left = primerID.find(LEFT_PRIMER_TAG);
+    std::size_t right = primerID.find(RIGHT_PRIMER_TAG);
     if ((left == std::string::npos) && (right == std::string::npos))
         throw std::runtime_error("invalid primer ID doesn't contain LEFT/RIGHT: " + _primerID);
     if (left != std::string::npos)
@@ -34,17 +38,11 @@ artic::Primer::Primer(unsigned int start, unsigned int end, const std::string pr
         if (right != std::string::npos)
             throw std::runtime_error("invalid primer ID contains both LEFT and RIGHT: " + _primerID);
         _isForward = true;
-        _baseID = _primerID.substr(0, left);
+        _baseIDit = left;
+        return;
     }
-    else
-    {
-        _isForward = false;
-        _baseID = _primerID.substr(0, right);
-    }
-
-    // check that the start/end is valid
-    if (_start >= _end)
-        throw std::runtime_error("invalid primer start/end for primerID: " + _primerID);
+    _isForward = false;
+    _baseIDit = right;
 }
 
 // MergeAlt will merge a primer with an alt, yielding a primer with the maximal span.
@@ -52,6 +50,8 @@ void artic::Primer::MergeAlt(const Primer& alt)
 {
     if (_isForward != alt._isForward)
         throw std::runtime_error("could not merge alt with different orientation to canonical");
+    if (_poolID != alt.GetPrimerPoolID())
+        throw std::runtime_error("could not merge alt from different pool to canonical");
     if (alt._start < _start)
         _start = alt._start;
     if (alt._end > _end)
@@ -75,7 +75,7 @@ unsigned int artic::Primer::GetLen(void) const { return _end - _start; }
 const std::string& artic::Primer::GetID(void) const { return _primerID; }
 
 // GetBaseID returns the baseID of the primer (with no alt or LEFT/RIGHT tag).
-const std::string& artic::Primer::GetBaseID(void) const { return _baseID; }
+std::string artic::Primer::GetBaseID(void) const { return _primerID.substr(0, _baseIDit); }
 
 // GetPrimerPoolID returns the primer pool ID for the primer.
 size_t artic::Primer::GetPrimerPoolID(void) const { return _poolID; }
@@ -95,7 +95,7 @@ const std::string artic::Primer::GetSeq(faidx_t* reference, const std::string& r
         _start,
         _end - 1,
         &len);
-    if (seq == NULL)
+    if (!seq)
         throw std::runtime_error("cannot fetch the reference sequence");
     if (len != int(GetLen()))
         throw std::runtime_error("did not fetch correct number of primer bases (got " + std::to_string(len) + ")");
@@ -176,7 +176,7 @@ artic::PrimerScheme::PrimerScheme(const std::string inputFile, unsigned int sche
         _numPrimers++;
 
         // chomp off any alt tag to get the canonical primer ID
-        std::string canonicalID = row[3].substr(0, row[3].find(tag_altPrimer));
+        std::string canonicalID = row[3].substr(0, row[3].find(ALT_PRIMER_TAG));
 
         // check to see if this primer or an alt has not been seen before and then add it to the forward/reverse map
         if (primer->IsForward())
@@ -210,7 +210,15 @@ artic::PrimerScheme::PrimerScheme(const std::string inputFile, unsigned int sche
 
     // check that all rows were handled
     if (_numPrimers != rowCount)
-        throw std::runtime_error("primer count does not equal the number of rows in the input file: " + std::to_string(_numPrimers) + " vs " + std::to_string(rowCount));
+        throw std::runtime_error("primer count does not equal the number of rows in the input file - " + std::to_string(_numPrimers) + " vs " + std::to_string(rowCount));
+
+    // check primer count matches scheme version
+    if (_version < 3)
+        if (_numPrimers != NUM_ARTIC_PRIMERS_v1_v2)
+            throw std::runtime_error("primer count does not equal the number required by the scheme version - " + std::to_string(_numPrimers) + " vs " + std::to_string(NUM_ARTIC_PRIMERS_v1_v2));
+    if (_version == 3)
+        if (_numPrimers != NUM_ARTIC_PRIMERS_v3)
+            throw std::runtime_error("primer count does not equal the number required by the scheme version - " + std::to_string(_numPrimers) + " vs " + std::to_string(NUM_ARTIC_PRIMERS_v3));
 
     // check the scheme
     _checkScheme();
@@ -354,7 +362,7 @@ void artic::PrimerScheme::_checkScheme(void)
         _fPrimerLocations.emplace_back(i->second->GetStart(), i->second->GetID());
 
         // find the corresponding reverse primer and add the position to the holder
-        schemeMap::iterator j = _rPrimers.find(i->second->GetBaseID() + tag_rightPrimer);
+        schemeMap::iterator j = _rPrimers.find(i->second->GetBaseID() + RIGHT_PRIMER_TAG);
         (j == _rPrimers.end()) ? throw std::runtime_error("can't find matching reverse primer for " + i->second->GetID()) : _rPrimerLocations.emplace_back(j->second->GetEnd(), j->second->GetID());
 
         // increment the amplicon counter and spans
@@ -424,16 +432,14 @@ void artic::PrimerScheme::_checkScheme(void)
 artic::Amplicon::Amplicon(Primer* p1, Primer* p2, PrimerScheme* scheme)
     : _fPrimer(p1), _rPrimer(p2), _scheme(scheme)
 {
+    // set if properly paired
+    _isProperlyPaired = (_fPrimer->GetBaseID() == _rPrimer->GetBaseID()) &&
+                        (_fPrimer->IsForward() != _rPrimer->IsForward()) &&
+                        (_fPrimer->GetPrimerPoolID() == _rPrimer->GetPrimerPoolID());
 }
 
 // IsProperlyPaired returns true if this primer is properly paired.
-bool artic::Amplicon::IsProperlyPaired(void)
-{
-    // paired if baseID matches, directions oppose and primer pool matches
-    return (_fPrimer->GetBaseID() == _rPrimer->GetBaseID()) &&
-           (_fPrimer->IsForward() != _rPrimer->IsForward()) &&
-           (_fPrimer->GetPrimerPoolID() == _rPrimer->GetPrimerPoolID());
-}
+bool artic::Amplicon::IsProperlyPaired(void) { return _isProperlyPaired; }
 
 // GetID returns the shared ID string of the primer pair.
 const std::string artic::Amplicon::GetID(void) const { return std::string(_fPrimer->GetID() + "_" + _rPrimer->GetID()); }
@@ -446,7 +452,7 @@ const std::string& artic::Amplicon::GetPrimerPool(void)
         auto id = _fPrimer->GetPrimerPoolID();
         return _scheme->GetPrimerPool(id);
     }
-    return Unmatched_Pool;
+    return NO_POOL;
 }
 
 // GetMaxSpan returns the start and end of the amplicon, including the primer sequence.

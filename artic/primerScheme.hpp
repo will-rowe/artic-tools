@@ -26,7 +26,7 @@ namespace artic
     {
     public:
         // Primer constructor.
-        Primer(unsigned int start, unsigned int end, const std::string primerID, size_t poolID);
+        Primer(unsigned int start, unsigned int end, const std::string primerID, std::size_t poolID);
 
         // MergeAlt will merge a primer with an alt, yielding a primer with the maximal span.
         void MergeAlt(const Primer& alt);
@@ -47,10 +47,10 @@ namespace artic
         const std::string& GetID(void) const;
 
         // GetBaseID returns the baseID of the primer (with _LEFT/_RIGHT stripped).
-        const std::string& GetBaseID(void) const;
+        std::string GetBaseID(void) const;
 
         // GetPrimerPoolID returns the pool ID for the primer pair.
-        size_t GetPrimerPoolID(void) const;
+        std::size_t GetPrimerPoolID(void) const;
 
         // IsForward returns the primer direction (true = forward, false = reverse).
         bool IsForward(void);
@@ -59,13 +59,13 @@ namespace artic
         const std::string GetSeq(faidx_t* reference, const std::string& refID) const;
 
     private:
-        int64_t _start;
-        int64_t _end;
-        std::string _primerID;
-        size_t _poolID;
-        bool _isForward;
-        unsigned int _numAlts;
-        std::string _baseID;
+        int64_t _start;        // the reference start position of the primer (0-based, half-open)
+        int64_t _end;          // the reference end position of the primer (0-based, half-open) -- NOT INCLUDED IN PRIMER
+        std::string _primerID; // the full ID of the primer (_ALT will have been removed during merging)
+        std::size_t _poolID;   // the primer pool ID
+        bool _isForward;       // true if the forward primer, false if the reverse primer
+        unsigned int _numAlts; // the number of alternate primers that have been merged into this primer
+        std::size_t _baseIDit; // iterator used to shorten the primerID to the baseID (i.e. strips _LEFT/_RIGHT)
     };
 
     //******************************************************************************
@@ -103,10 +103,10 @@ namespace artic
         std::vector<std::string> GetPrimerPools(void);
 
         // GetPrimerPool returns the primer pool for the provided pool ID.
-        const std::string& GetPrimerPool(size_t poolID) const;
+        const std::string& GetPrimerPool(std::size_t poolID) const;
 
         // GetPrimerPoolID returns the primer pool ID for the provided pool name.
-        size_t GetPrimerPoolID(const std::string& poolName) const;
+        std::size_t GetPrimerPoolID(const std::string& poolName) const;
 
         // GetRefStart returns the first position in the reference covered by the primer scheme.
         int64_t GetRefStart(void);
@@ -178,9 +178,10 @@ namespace artic
         const Primer* GetReversePrimer(void);
 
     private:
-        Primer* _fPrimer;      // pointer to the forward primer object
-        Primer* _rPrimer;      // pointer to the reverse primer object
-        PrimerScheme* _scheme; // pointer to the primer scheme
+        Primer* _fPrimer;       // pointer to the forward primer object
+        Primer* _rPrimer;       // pointer to the reverse primer object
+        PrimerScheme* _scheme;  // pointer to the primer scheme used to generate the amplicon
+        bool _isProperlyPaired; // denotes if amplicon has properly paired primers
     };
 
 } // namespace artic
