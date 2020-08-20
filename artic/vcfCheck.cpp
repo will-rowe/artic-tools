@@ -149,7 +149,8 @@ void artic::VcfChecker::Run()
             }
 
             // otherwise, the write the record we had on hold and clear the holder
-            LOG_TRACE("\tmultiple copies of var found at pos {} in overlap region", adjustedPos);
+            // TODO: this would be the place to merge copies as discussed at https://github.com/will-rowe/artic-tools/issues/3
+            LOG_TRACE("\tmultiple copies of var found at pos {} in overlap region, keeping all copies", adjustedPos);
             if (_outfileName.size() != 0)
                 if (bcf_write(_outputVCF, _vcfHeader, _recHolder) < 0)
                     throw std::runtime_error("could not write record");
