@@ -43,7 +43,7 @@ TEST(primerscheme, constructor)
     }
     catch (std::runtime_error& err)
     {
-        EXPECT_EQ(err.what(), std::string("unrecognised primer scheme version: 666"));
+        EXPECT_EQ(err.what(), std::string("unrecognised primer scheme version - 666"));
     }
     catch (...)
     {
@@ -86,10 +86,8 @@ TEST(primerscheme, access)
         EXPECT_EQ(id, std::string("nCoV-2019_1_LEFT_nCoV-2019_1_RIGHT"));
 
         // make sure pool names and IDs match up between primers and the scheme
-        auto poolName = pp.GetPrimerPool();
-        auto retPoolID = ps.GetPrimerPoolID(poolName);
-        auto retPoolName = ps.GetPrimerPool(retPoolID);
-        EXPECT_EQ(pp.GetPrimerPool(), pool1);
+        auto poolID = pp.GetPrimerPoolID();
+        auto retPoolName = ps.GetPrimerPool(poolID);
         EXPECT_EQ(retPoolName, pool1);
 
         auto pp2 = ps.FindPrimers(4046, 4450);
@@ -98,7 +96,7 @@ TEST(primerscheme, access)
         std::cout << id2 << std::endl;
         ASSERT_TRUE(pp2.IsProperlyPaired());
         EXPECT_EQ(id2, std::string("nCoV-2019_14_LEFT_nCoV-2019_14_RIGHT"));
-        EXPECT_EQ(pp2.GetPrimerPool(), pool2);
+        EXPECT_EQ(ps.GetPrimerPool(pp2.GetPrimerPoolID()), pool2);
         EXPECT_EQ(span.first, 4044);
         EXPECT_EQ(span.second, 4450);
     }
@@ -110,14 +108,14 @@ TEST(primerscheme, access)
     {
         auto pp = ps.FindPrimers(300, 400);
         ASSERT_FALSE(pp.IsProperlyPaired());
-        EXPECT_EQ(pp.GetPrimerPool(), std::string("unmatched"));
+        EXPECT_EQ(ps.GetPrimerPool(pp.GetPrimerPoolID()), std::string("unmatched"));
     }
     catch (std::runtime_error& err)
     {
         FAIL() << "runtime error: " << err.what();
     }
     auto primerPools = ps.GetPrimerPools();
-    EXPECT_EQ(primerPools.size(), 2);
+    EXPECT_EQ(primerPools.size(), numPools);
 }
 
 // primer sites
@@ -155,6 +153,8 @@ TEST(primerscheme, primerseq)
     auto p1 = pp.GetForwardPrimer();
     faidx_t* fai = fai_load(reference.c_str());
     auto seq = p1->GetSeq(fai, ps.GetReferenceName());
+    if (fai)
+        fai_destroy(fai);
     EXPECT_EQ(seq.size(), p1->GetLen());
     EXPECT_STREQ("ACCAACCAACTTTCGATCTCTTGT", seq.c_str());
 }
