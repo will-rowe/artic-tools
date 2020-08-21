@@ -62,7 +62,7 @@ int main(int argc, char** argv)
     validatorCmd->add_option("--schemeVersion", primerSchemeVersion, "The ARTIC primer scheme version (default = 3)");
     validatorCmd->add_flag("--noSchemeVersion", ignoreVersion, "Ignore the ARTIC primer scheme version");
     validatorCmd->add_option("-o,--outputPrimerSeqs", outFileName, "If provided, will write primer sequences as multiFASTA (requires --refSeq to be provided)");
-    validatorCmd->add_option("-r,--refSeq", refSeq, "If provided, will write primer sequences as multiFASTA (requires --refSeq to be provided)");
+    validatorCmd->add_option("-r,--refSeq", refSeq, "The reference sequence for the primer scheme (FASTA format)");
 
     // add vcfFilter options and flags
     std::string vcfIn;
