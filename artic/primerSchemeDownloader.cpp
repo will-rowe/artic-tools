@@ -1,6 +1,7 @@
 #include <boost/filesystem.hpp>
 #include <iostream>
 #include <map>
+#include <sstream>
 
 #include "log.hpp"
 #include "primerScheme.hpp"
