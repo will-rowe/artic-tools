@@ -29,6 +29,7 @@ int main(int argc, char** argv)
     // set up the subcommands
     app.require_subcommand();
     CLI::App* softmaskCmd = app.add_subcommand("align_trim", "Trim alignments from an amplicon scheme");
+    CLI::App* getterCmd = app.add_subcommand("get_scheme", "Download an ARTIC primer scheme and reference sequence");
     CLI::App* validatorCmd = app.add_subcommand("validate_scheme", "Validate an amplicon scheme for compliance with ARTIC standards");
     CLI::App* vcfFilterCmd = app.add_subcommand("check_vcf", "Check a VCF file based on primer scheme info and user-defined cut offs");
 
@@ -37,18 +38,16 @@ int main(int argc, char** argv)
     std::string primerSchemeFile;
     std::string outFileName;
     std::string refSeq;
-    int primerSchemeVersion = 3;
+    unsigned int primerSchemeVersion = 3;
     unsigned int minMAPQ = 15;
     unsigned int normalise = 100;
     bool primerStart = false;
     bool removeBadPairs = false;
     bool noReadGroups = false;
     bool verbose = false;
-    bool ignoreVersion = false;
     softmaskCmd->add_option("-b,--bamFile", bamFile, "The input bam file (will try STDIN if not provided)");
     softmaskCmd->add_option("scheme", primerSchemeFile, "The ARTIC primer scheme")->required()->check(CLI::ExistingFile);
     softmaskCmd->add_option("--schemeVersion", primerSchemeVersion, "The ARTIC primer scheme version (default = 3)");
-    softmaskCmd->add_flag("--noSchemeVersion", ignoreVersion, "Ignore the ARTIC primer scheme version");
     softmaskCmd->add_option("--minMAPQ", minMAPQ, "A minimum MAPQ threshold for processing alignments (default = 15)");
     softmaskCmd->add_option("--normalise", normalise, "Subsample to N coverage per strand (default = 100, deactivate with 0)");
     softmaskCmd->add_option("--report", outFileName, "Output an align_trim report to file");
@@ -57,10 +56,16 @@ int main(int argc, char** argv)
     softmaskCmd->add_flag("--no-read-groups", noReadGroups, "Do not divide reads into groups in SAM output");
     softmaskCmd->add_flag("--verbose", verbose, "Output debugging information to STDERR");
 
+    // add gett options and flags
+    std::string getSchemeName;
+    unsigned int getSchemeVersion = 0;
+    getterCmd->add_option("scheme", getSchemeName, "The name of the scheme to download (ebola|nipah|scov2)")->required();
+    getterCmd->add_option("--schemeVersion", getSchemeVersion, "The ARTIC primer scheme version (default = latest)");
+    getterCmd->add_option("-o,--outDir", outFileName, "The directory to write the scheme and reference sequence to");
+
     // add validator options and flags
     validatorCmd->add_option("scheme", primerSchemeFile, "The primer scheme to validate")->required()->check(CLI::ExistingFile);
     validatorCmd->add_option("--schemeVersion", primerSchemeVersion, "The ARTIC primer scheme version (default = 3)");
-    validatorCmd->add_flag("--noSchemeVersion", ignoreVersion, "Ignore the ARTIC primer scheme version");
     validatorCmd->add_option("-o,--outputPrimerSeqs", outFileName, "If provided, will write primer sequences as multiFASTA (requires --refSeq to be provided)");
     validatorCmd->add_option("-r,--refSeq", refSeq, "The reference sequence for the primer scheme (FASTA format)");
 
@@ -71,7 +76,6 @@ int main(int argc, char** argv)
     vcfFilterCmd->add_option("scheme", primerSchemeFile, "The primer scheme to use")->required()->check(CLI::ExistingFile);
     vcfFilterCmd->add_option("vcf", vcfIn, "The input VCF file to filter")->required()->check(CLI::ExistingFile);
     vcfFilterCmd->add_option("--schemeVersion", primerSchemeVersion, "The ARTIC primer scheme version (default = 3)");
-    vcfFilterCmd->add_flag("--noSchemeVersion", ignoreVersion, "Ignore the ARTIC primer scheme version");
     vcfFilterCmd->add_option("-o,--vcfOut", outFileName, "If provided, will write variants that pass checks");
     vcfFilterCmd->add_flag("--dropPrimerVars", dropPrimerVars, "Will drop variants called within primer regions for the pool");
     vcfFilterCmd->add_flag("--dropOverlapFails", dropOverlapFails, "Will drop variants called once within amplicon overlap regions");
@@ -79,21 +83,23 @@ int main(int argc, char** argv)
     // add the softmask callback
     softmaskCmd->callback([&]() {
         // load and check the primer scheme
-        auto ps = (ignoreVersion) ? artic::PrimerScheme(primerSchemeFile) : artic::PrimerScheme(primerSchemeFile, primerSchemeVersion);
+        auto ps = artic::PrimerScheme(primerSchemeFile, primerSchemeVersion);
 
         // setup and run the softmasker
         auto masker = artic::Softmasker(&ps, bamFile, userCmd.str(), minMAPQ, normalise, removeBadPairs, noReadGroups, primerStart, outFileName);
         masker.Run(verbose);
     });
 
+    // add the getter callback
+    getterCmd->callback([&]() {
+        artic::DownloadScheme(getSchemeName, getSchemeVersion, outFileName);
+    });
+
     // add the validator callback
     validatorCmd->callback([&]() {
-        auto ps = (ignoreVersion) ? artic::PrimerScheme(primerSchemeFile) : artic::PrimerScheme(primerSchemeFile, primerSchemeVersion);
+        auto ps = artic::PrimerScheme(primerSchemeFile, primerSchemeVersion);
         std::cout << "primer scheme file:\t" << primerSchemeFile << std::endl;
-        if (!ignoreVersion)
-            std::cout << "primer scheme version:\t" << ps.GetVersion() << std::endl;
-        else
-            std::cout << "primer scheme version:\tunversioned" << std::endl;
+        std::cout << "primer scheme version:\t" << ps.GetVersion() << std::endl;
         std::cout << "reference sequence ID:\t" << ps.GetReferenceName() << std::endl;
         std::cout << "number of pools:\t" << ps.GetPrimerPools().size() << std::endl;
         std::cout << "number of primers:\t" << ps.GetNumPrimers() << " (includes " << ps.GetNumAlts() << " alts)" << std::endl;
@@ -130,7 +136,7 @@ int main(int argc, char** argv)
 
     // add the vcfFilter callback
     vcfFilterCmd->callback([&]() {
-        auto ps = (ignoreVersion) ? artic::PrimerScheme(primerSchemeFile) : artic::PrimerScheme(primerSchemeFile, primerSchemeVersion);
+        auto ps = artic::PrimerScheme(primerSchemeFile, primerSchemeVersion);
 
         // setup and run the softmasker
         auto filter = artic::VcfChecker(&ps, vcfIn, outFileName, dropPrimerVars, dropOverlapFails);

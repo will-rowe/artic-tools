@@ -13,8 +13,6 @@ const std::string LEFT_PRIMER_TAG = "_LEFT";
 const std::string RIGHT_PRIMER_TAG = "_RIGHT";
 const std::string ALT_PRIMER_TAG = "_alt";
 const std::string NO_POOL = "unmatched";
-const unsigned int NUM_ARTIC_PRIMERS_v1_v2 = 196;
-const unsigned int NUM_ARTIC_PRIMERS_v3 = 218;
 
 // Primer constructor.
 artic::Primer::Primer(unsigned int start, unsigned int end, const std::string primerID, size_t poolID)
@@ -103,33 +101,10 @@ const std::string artic::Primer::GetSeq(faidx_t* reference, const std::string& r
 }
 
 // PrimerScheme constructor.
-artic::PrimerScheme::PrimerScheme(const std::string& inputFile)
-{
-    _loadScheme(inputFile);
-    _validateScheme();
-}
-
-// PrimerScheme constructor with version checking.
 artic::PrimerScheme::PrimerScheme(const std::string& inputFile, unsigned int schemeVersion)
     : _version(schemeVersion)
 {
-
-    // check the version provided
-    if (_version < 1 || _version > 3)
-        throw std::runtime_error("unrecognised primer scheme version - " + std::to_string(_version));
-
-    // load the scheme
     _loadScheme(inputFile);
-
-    // check primer count matches scheme version
-    if (_version < 3)
-        if (_numPrimers != NUM_ARTIC_PRIMERS_v1_v2)
-            throw std::runtime_error("primer count does not equal the number required by the scheme version - " + std::to_string(_numPrimers) + " vs " + std::to_string(NUM_ARTIC_PRIMERS_v1_v2));
-    if (_version == 3)
-        if (_numPrimers != NUM_ARTIC_PRIMERS_v3)
-            throw std::runtime_error("primer count does not equal the number required by the scheme version - " + std::to_string(_numPrimers) + " vs " + std::to_string(NUM_ARTIC_PRIMERS_v3));
-
-    // check the scheme
     _validateScheme();
 }
 

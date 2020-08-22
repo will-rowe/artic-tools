@@ -9,6 +9,9 @@
 
 namespace artic
 {
+    // DownloadScheme will download a specified primer scheme and the reference sequence.
+    void DownloadScheme(const std::string& schemeName, unsigned int requestedVersion, const std::string& outDir);
+
     class Primer;
     class PrimerScheme;
     class Amplicon;
@@ -75,7 +78,6 @@ namespace artic
     {
     public:
         // PrimerScheme constructors and destructor.
-        PrimerScheme(const std::string& inputFile);
         PrimerScheme(const std::string& inputFile, unsigned int schemeVersion);
         ~PrimerScheme(void);
 

@@ -12,6 +12,16 @@ Example usage:
 artic-tools align_trim -b in.bam primerscheme.bed > out.bam 2> out.log
 ```
 
+## get_scheme
+
+The `get_scheme` command can download primer schemes and sequences for several ARTIC references.
+
+Example usage:
+
+```
+artic-tools get_scheme nipah
+```
+
 ## validate_scheme
 
 The `validate_scheme` command is used to check your primer scheme confirms to an ARTIC standard and can be used in our pipelines.
@@ -69,10 +79,10 @@ Example ouput:
 [14:13:50] artic-tools::vcfchecker:     nothing seen at position yet, holding var
 [14:13:50] artic-tools::vcfchecker: variant at pos 22868: TG->T
 [14:13:50] artic-tools::vcfchecker:     located within an amplicon overlap region
-[14:13:50] artic-tools::vcfchecker:     var pos does not match with that of previously identified overlap, holding var (and dropping held var at 22862)
+[14:13:50] artic-tools::vcfchecker:     var pos does not match with that of previously identified overlap var, holding new var (and dropping held var at 22862)
 [14:13:50] artic-tools::vcfchecker: variant at pos 22896: T->TTGG
 [14:13:50] artic-tools::vcfchecker:     located within an amplicon overlap region
-[14:13:50] artic-tools::vcfchecker:     var pos does not match with that of previously identified overlap, holding var (and dropping held var at 22867)
+[14:13:50] artic-tools::vcfchecker:     var pos does not match with that of previously identified overlap var, holding new var (and dropping held var at 22867)
 [14:13:50] artic-tools::vcfchecker: variant at pos 22909: TA->T
 [14:13:50] artic-tools::vcfchecker: variant at pos 22913: T->C
 [14:13:50] artic-tools::vcfchecker: variant at pos 22916: CT->TC
@@ -85,7 +95,7 @@ Example ouput:
 [14:13:50] artic-tools::vcfchecker: variant at pos 23098: AC->GT
 [14:13:50] artic-tools::vcfchecker: variant at pos 23183: T->TC
 [14:13:50] artic-tools::vcfchecker:     located within an amplicon overlap region
-[14:13:50] artic-tools::vcfchecker:     var pos does not match with that of previously identified overlap, holding var (and dropping held var at 22895)
+[14:13:50] artic-tools::vcfchecker:     var pos does not match with that of previously identified overlap var, holding new var (and dropping held var at 22895)
 [14:13:50] artic-tools::vcfchecker: variant at pos 23403: A->G
 [14:13:50] artic-tools::vcfchecker: variant at pos 27752: C->T
 [14:13:50] artic-tools::vcfchecker: variant at pos 28881: GGG->AAC
