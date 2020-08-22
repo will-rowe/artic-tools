@@ -75,10 +75,13 @@ void artic::VcfChecker::Run()
     auto primerPools = _primerScheme->GetPrimerPools();
     int ndst = 0;
     char* dst = NULL;
+    std::string prevAl;
 
     // iterate VCF file
     while (bcf_read(_inputVCF, _vcfHeader, _curRec) == 0)
     {
+        if (_curRec->errcode)
+            throw std::runtime_error("refusing to process VCF records");
         bcf_unpack(_curRec, BCF_UN_STR);
         _recordCounter++;
         auto adjustedPos = _curRec->pos + 1;
@@ -126,29 +129,42 @@ void artic::VcfChecker::Run()
         }
 
         // check amplicon overlap
-        // todo: handle if multiple vars found at a pos but alleles are different?
-        // todo: merge identical vars in overlaps?
         if (_primerScheme->CheckAmpliconOverlap(_curRec->pos))
         {
             LOG_TRACE("\tlocated within an amplicon overlap region");
 
-            // check if we've already seen an var in this overlap position
+            // check if we've already seen a var in this overlap position
             if (!_dupCheck)
             {
                 LOG_TRACE("\tnothing seen at position yet, holding var");
                 _recHolder = bcf_dup(_curRec);
                 _dupCheck = true;
-                continue;
-            }
-            if (_curRec->pos != _recHolder->pos)
-            {
-                LOG_ERROR("\tvar pos does not match with that of previously identified overlap, holding var (and dropping held var at {})", _recHolder->pos);
-                bcf_empty(_recHolder);
-                _recHolder = bcf_dup(_curRec);
+                prevAl = std::string(_curRec->d.allele[1]);
                 continue;
             }
 
-            // otherwise, the write the record we had on hold and clear the holder
+            // check the held var is at the same position
+            if (_curRec->pos != _recHolder->pos)
+            {
+                LOG_ERROR("\tvar pos does not match with that of previously identified overlap var, holding new var (and dropping held var at {})", _recHolder->pos + 1);
+                bcf_empty(_recHolder);
+                _recHolder = bcf_dup(_curRec);
+                prevAl = std::string(_curRec->d.allele[1]);
+                continue;
+            }
+
+            // now check if the held var is the same allele
+            // TODO: this logic won't check all against all if num allele > 2
+            if (strcmp(_curRec->d.allele[1], prevAl.c_str()))
+            {
+                LOG_ERROR("\tvar pos matches that of previously identified overlap var but alleles mismatch, holding new var (and dropping held var at {})", adjustedPos);
+                bcf_empty(_recHolder);
+                _recHolder = bcf_dup(_curRec);
+                prevAl = std::string(_curRec->d.allele[1]);
+                continue;
+            }
+
+            // held var matches the current var, so we can write the held record, clear the holder, and let the loop progress so that the current rec is also written
             // TODO: this would be the place to merge copies as discussed at https://github.com/will-rowe/artic-tools/issues/3
             LOG_TRACE("\tmultiple copies of var found at pos {} in overlap region, keeping all copies", adjustedPos);
             if (_outfileName.size() != 0)
