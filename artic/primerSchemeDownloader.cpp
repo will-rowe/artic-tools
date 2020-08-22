@@ -1,4 +1,4 @@
-#include <filesystem>
+#include <boost/filesystem.hpp>
 #include <iostream>
 #include <map>
 
@@ -78,8 +78,8 @@ void artic::DownloadScheme(const std::string& schemeName, unsigned int requested
     std::stringstream of2;
     if (outDir.size() != 0)
     {
-        if (!std::filesystem::is_directory(outDir) || !std::filesystem::exists(outDir))
-            std::filesystem::create_directory(outDir);
+        if (!boost::filesystem::is_directory(outDir) || !boost::filesystem::exists(outDir))
+            boost::filesystem::create_directory(outDir);
         of1 << outDir << "/";
         of2 << outDir << "/";
     }
