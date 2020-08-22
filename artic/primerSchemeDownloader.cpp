@@ -1,5 +1,6 @@
 #include <filesystem>
 #include <iostream>
+#include <map>
 
 #include "log.hpp"
 #include "primerScheme.hpp"
@@ -21,13 +22,14 @@ enum Scheme
     Nipah,
     Scov2,
 };
-static const std::map<std::string, Scheme> schemeStrings{
-    {"ebola", Ebov},
-    {"nipah", Nipah},
-    {"scov2", Scov2},
-};
+
 Scheme resolveScheme(std::string query)
 {
+    static const std::map<std::string, Scheme> schemeStrings{
+        {"ebola", Ebov},
+        {"nipah", Nipah},
+        {"scov2", Scov2},
+    };
     auto itr = schemeStrings.find(query);
     if (itr != schemeStrings.end())
         return itr->second;
@@ -62,9 +64,6 @@ void artic::DownloadScheme(const std::string& schemeName, unsigned int requested
             refURL = scovRefUrls.at(version - 1);
             break;
         default:
-            std::cerr << "available schemes:" << std::endl;
-            for (auto& i : schemeStrings)
-                std::cerr << "- " << i.first << std::endl;
             throw std::runtime_error("unknown scheme: " + schemeName);
     }
     artic::Log::Init("getter");
