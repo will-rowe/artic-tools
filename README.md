@@ -14,9 +14,10 @@
 
 This collection of tools is being worked on and more utility is due to be added. For now, we have:
 
-* primer scheme validation
-* alignment softmasking
-* vcf filtering
+- download primer schemes and reference sequences
+- primer scheme validation
+- alignment softmasking
+- vcf filtering
 
 Read the [docs](https://artic-tools.readthedocs.io/en/latest/) for more info and checkout the [ARTIC pipeline](https://github.com/artic-network/fieldbioinformatics).
 

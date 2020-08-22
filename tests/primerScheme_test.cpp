@@ -35,21 +35,6 @@ TEST(primerscheme, constructor)
         FAIL() << "expected std::runtime_error";
     }
 
-    // catch bad version
-    try
-    {
-        artic::PrimerScheme(inputScheme, 666);
-        FAIL() << "expected a no file error";
-    }
-    catch (std::runtime_error& err)
-    {
-        EXPECT_EQ(err.what(), std::string("unrecognised primer scheme version - 666"));
-    }
-    catch (...)
-    {
-        FAIL() << "expected std::runtime_error";
-    }
-
     // constructor should pass
     try
     {
