@@ -73,6 +73,8 @@ void artic::DownloadScheme(const std::string& schemeName, unsigned int requested
     LOG_TRACE("\tversion: {}", requestedVersion);
     if ((requestedVersion != version) && (requestedVersion != 0))
         LOG_WARN("requested scheme version not found, using latest version instead (v{})", version);
+    if (requestedVersion == 0)
+        LOG_WARN("requested latest scheme version, using v{}", version);
 
     // create filenames
     std::stringstream of1;

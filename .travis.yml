@@ -57,5 +57,6 @@ script:
   - ../bin/artic-tools_tests
   - ../bin/artic-tools -v
   - ../bin/artic-tools align_trim -h
+  - ../bin/artic-tools get_scheme nipah
   - ../bin/artic-tools validate_scheme -h
   - ../bin/artic-tools check_vcf -h
