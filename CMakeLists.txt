@@ -9,10 +9,10 @@ set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
 
 # set a default build type if none was specified
-set(COBS_DEFAULT_BUILD_TYPE "Release")
+set(DEFAULT_BUILD_TYPE "Release")
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
-  message(STATUS "Setting build type to '${COBS_DEFAULT_BUILD_TYPE}' as none was specified")
-  set(CMAKE_BUILD_TYPE "${COBS_DEFAULT_BUILD_TYPE}" CACHE
+  message(STATUS "Setting build type to '${DEFAULT_BUILD_TYPE}' as none was specified")
+  set(CMAKE_BUILD_TYPE "${DEFAULT_BUILD_TYPE}" CACHE
     STRING "Choose the type of build" FORCE)
   # set the possible values of build type for cmake-gui
   set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
