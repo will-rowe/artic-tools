@@ -6,6 +6,7 @@
     <a href='https://artic-tools.readthedocs.io/en/latest/?badge=latest'><img src='https://readthedocs.org/projects/artic-tools/badge/?version=latest' alt='Documentation Status'/></a>
     <a href="https://bioconda.github.io/recipes/artic-tools/README.html"><img src="https://anaconda.org/bioconda/artic-tools/badges/downloads.svg" alt="bioconda"></a>
     <a href="https://github.com/will-rowe/artic-tools/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-MIT-orange.svg" alt="License"></a>
+    <a href="https://zenodo.org/badge/latestdoi/280260660"><img src="https://zenodo.org/badge/280260660.svg" alt="DOI"></a>
 </div>
 
 ---
