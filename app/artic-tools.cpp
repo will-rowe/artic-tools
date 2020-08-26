@@ -64,10 +64,12 @@ int main(int argc, char** argv)
     getterCmd->add_option("-o,--outDir", outFileName, "The directory to write the scheme and reference sequence to");
 
     // add validator options and flags
+    std::string insertFile;
     validatorCmd->add_option("scheme", primerSchemeFile, "The primer scheme to validate")->required()->check(CLI::ExistingFile);
     validatorCmd->add_option("--schemeVersion", primerSchemeVersion, "The ARTIC primer scheme version (default = 3)");
     validatorCmd->add_option("-o,--outputPrimerSeqs", outFileName, "If provided, will write primer sequences as multiFASTA (requires --refSeq to be provided)");
     validatorCmd->add_option("-r,--refSeq", refSeq, "The reference sequence for the primer scheme (FASTA format)");
+    validatorCmd->add_option("--outputInserts", insertFile, "If provided, will write primer scheme inserts as BED (exluding primer sequences)");
 
     // add vcfFilter options and flags
     std::string vcfIn;
@@ -108,6 +110,8 @@ int main(int argc, char** argv)
         std::cout << "scheme ref. span:\t" << ps.GetRefStart() << "-" << ps.GetRefEnd() << std::endl;
         float proportion = (float)ps.GetNumOverlaps() / (float)(ps.GetRefEnd() - ps.GetRefStart());
         std::cout << "scheme overlaps:\t" << proportion * 100 << "%" << std::endl;
+
+        // provide primer sequences and insert sizes if requested
         if (outFileName.size() != 0)
         {
             if (refSeq.size() == 0)
@@ -131,6 +135,20 @@ int main(int argc, char** argv)
             if (fai)
                 fai_destroy(fai);
             std::cout << "primer sequences:\t" << outFileName << std::endl;
+        }
+        if (insertFile.size() != 0)
+        {
+            std::ofstream fh;
+            fh.open(insertFile);
+            int counter = 1;
+            for (auto amplicon : ps.GetExpAmplicons())
+            {
+                auto poolID = amplicon.GetPrimerPoolID();
+                fh << ps.GetReferenceName() << "\t" << amplicon.GetForwardPrimer()->GetEnd() << "\t" << amplicon.GetReversePrimer()->GetStart() << "\t" << counter << "\t" << ps.GetPrimerPool(poolID) << "\t+" << std::endl;
+                counter++;
+            }
+            fh.close();
+            std::cout << "primer inserts:\t" << insertFile << std::endl;
         }
     });
 

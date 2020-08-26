@@ -173,7 +173,13 @@ int64_t artic::PrimerScheme::GetRefEnd(void) { return _refEnd; }
 unsigned int artic::PrimerScheme::GetNumOverlaps(void) { return _ampliconOverlaps.count(); }
 
 // GetExpAmplicons returns a vector to the amplicons the scheme expects to produce.
-const std::vector<artic::Amplicon>& artic::PrimerScheme::GetExpAmplicons(void) const { return _expAmplicons; }
+const std::vector<artic::Amplicon>& artic::PrimerScheme::GetExpAmplicons(void)
+{
+    std::sort(_expAmplicons.begin(), _expAmplicons.end(), [](auto& lhs, auto& rhs) {
+        return lhs.GetForwardPrimer()->GetEnd() < rhs.GetForwardPrimer()->GetEnd();
+    });
+    return _expAmplicons;
+}
 
 // FindPrimers returns a primer pair with the nearest forward and reverse primer for a given segment start and end.
 // Note: the primer pair may not be correctly paired, check using the IsProperlyPaired() method
