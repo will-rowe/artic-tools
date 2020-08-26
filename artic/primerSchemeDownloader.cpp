@@ -89,7 +89,7 @@ void artic::DownloadScheme(const std::string& schemeName, unsigned int requested
     if (outDir.size() != 0)
     {
         if (!boost::filesystem::is_directory(outDir) || !boost::filesystem::exists(outDir))
-            boost::filesystem::create_directory(outDir);
+            boost::filesystem::create_directories(outDir);
         of << outDir << "/";
     }
     of << schemeName << ".v" << version;
