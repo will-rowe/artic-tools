@@ -118,7 +118,7 @@ namespace artic
         unsigned int GetNumOverlaps(void);
 
         // GetExpAmplicons returns a vector to the amplicons the scheme expects to produce.
-        const std::vector<Amplicon>& GetExpAmplicons(void) const;
+        const std::vector<Amplicon>& GetExpAmplicons(void);
 
         // FindPrimers returns pointers to the nearest forward and reverse primer, given an alignment segment's start and end position.
         Amplicon FindPrimers(int64_t segStart, int64_t segEnd);
