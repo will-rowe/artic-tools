@@ -446,7 +446,7 @@ artic::Amplicon::Amplicon(Primer* p1, Primer* p2)
     }
 
     // p1 must come before p2
-    if (_fPrimer->GetStart() >= _rPrimer->GetEnd())
+    if (_fPrimer->GetEnd() >= _rPrimer->GetStart())
         throw std::runtime_error("cannnot create amplicon from outward facing primers");
 
     // set if properly paired

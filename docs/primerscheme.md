@@ -55,7 +55,9 @@ The following sections will discuss how primer schemes are read from a `*.primer
 
 ### Reading schemes
 
-Each line in a `*.primer.bed` file is a single primer. Lines are processed one at a time and the input file does not to be sorted in any way beforehand (although most schemes are sorted by primer start coordinate). As lines are read, they are converted to primer objects and added to an in-memory scheme.
+#### primers
+
+Each line in a `*.primer.bed` file is a single primer. Lines are processed one at a time and the input file does not to be sorted in any way beforehand (although most schemes are sorted by primer start coordinate). As lines are read, they are converted to primer objects.
 
 Most of the logic behind creating a primer object relies on the primer name (column 4). As a primer line is read, we check for the following tags in the name field:
 
@@ -65,46 +67,176 @@ Most of the logic behind creating a primer object relies on the primer name (col
 | `_RIGHT` | the right primer     |
 | `_alt`   | the primer is an alt |
 
-A `_LEFT` or `_RIGHT` tag is required and only one is allowed per primer. The `_alt` tag is optional and denotes that the primer is an alternate belonging to a primer pair.
+**Important**:
 
-**Note**: the tags are cases sensitive.
+- tags are cases sensitive
+- tags can be anywhere in the primer name but typically are placed at the end (e.g. REGION_42_RIGHT_alt)
+- a `_LEFT` or `_RIGHT` tag is required and only one is allowed per primer
+- the `_alt` tag is optional and denotes that the primer is an alternate version of another primer
 
-Depending on the presence of the `_LEFT` or `_RIGHT` tag, the primer is assigned a direction (+/- to denote forward/reverse). This information is also encoded in column 6 of newer schemes. Once the tags have been checked for they are removed and we are left with a primer base ID which is used to group primers by amplicon. For example:
+To merge a primer with its alternate into a single primer object, the two primers are combined such that a maximal span is achieved. The merged primer will have `_alt` dropped from the ID.
 
-```
-REGION_42_LEFT
-REGION_42_RIGHT
-REGION_42_RIGHT_alt
-```
+Depending on the presence of the `_LEFT` or `_RIGHT` tag, the primer is assigned a direction (+/- to denote forward/reverse). Direction is also encoded in column 6 of newer schemes.
 
-> These primers will be treated as one amplicon in the scheme, which is given the base ID "REGION_42". The two right primers will be merged to yield a single right primer.
+In addition to the information encoded in the name field, we also use the start and end coordinates (columns 2 and 3) and the primer pool (column 5) when we create primer objects. The primer pool is encoded as an integer in the later scheme versions, but we treat it as a string in the primer scheme code (for backwards compatibility with the older primer scheme files that stored it as a string).
 
-To merge a primer with its alternate, the primers are combined such that a maximal span is achieved. The merged primer will have `_alt` dropped from the ID.
+For each primer object, the following information is available:
 
-In addition to using the name field for creating the primer object, we record the start and end coordinates (columns 2 and 3) and the primer pool (column 5). The primer pool is encoded as an integer in the later scheme versions, but we treat it as a string in the primer scheme code (for backwards compatibility with the older primer scheme files that stored it as a string).
+- primer name
+- primer base name (all tags removed)
+- reference start coordinate
+- reference end coordinate
+- number of alts merged into the primer
+- primer pool
 
-### Scheme validation
+We can also call several helper methods on the object for getting things such as primer sequence, length etc.
 
-The primer schemes are read from file and validated.
+#### schemes
 
-On reading from file, the following must be true:
+Once all lines in a `*.primer.bed` file have been read and converted to primer objects they are held in 2 unordered maps; one for forward primers and one for reverse primers. These are part of the in-memory scheme data structure which is used to access primers in the artic software.
 
-- file must exist and be readable
-- a recognised primer scheme version must be provided
-- must be TSV with correct column count correct for scheme version
-- must not contain multiple reference sequence IDs
+In addition to the primers themselves, the scheme also contains some extra information to enable validation and querying.
+
+### Validating schemes
+
+On reading the scheme file, it will have satisified the following checks:
+
+- scheme file must exist and be readable
+- scheme file must have at least 5 columns (tab separated)
 - each row must encode a primer (problem rows are flagged and validation fails after all rows are tried)
+- scheme file must not contain multiple reference sequence IDs (first column)
 
-Once the file processed for primers, the following checks are made:
+The scheme data structure will then be validated:
 
-- check there are primers in the scheme
-- check the number of forward primers match the number of reverse primers (this is **after** merging alts)
-- check forward and reverse primers make proper amplicons (based on shared canonical primer IDs)
-- check there are no gaps in the scheme
+- the scheme must contain primers
+- the number of forward primers must match the number of reverse primers (this is **after** merging alts)
+- each forward primer must have a reverse primer with a matching base name within the same primer pool
+- no gaps must be present within the scheme (i.e. regions of the reference not covered)
 
-The following information can be reported from the scheme:
+### Querying schemes
 
-- number of pools, primers, amplicons etc.
-- mean amplicon size
-- the scheme span, with respect to the reference co-ordinates
-- the scheme amplicon overlaps (i.e. the proportion of the scheme span with >1 amplicon coverage)
+Once loaded and validated, the primer scheme can be queried for basic information such as:
+
+- number of primers
+- number of primer pools
+- reference sequence name
+- reference region covered by the scheme
+
+For a given a reference coordinate it, the scheme can also return the nearest forward and reverse primer. The returned pair of primers is provided within a container, referred to as an `amplicon`.
+
+#### amplicons
+
+Any primers within a scheme can be combined to produce an `amplicon` if they satisfy the following:
+
+- one primer is forward and one is reverse
+- the end coordinate of the forward primer is before the start coordinate of the reverse primer (i.e. primers can't be outward facing of each other)
+
+The scheme will arrange any amplicon so the forward primer within an amplicon is first. It will then mark the the amplicon as `properly paired` if the following conditions are met:
+
+- the base name of the forward and reverse primer match
+- the primer pool name matches
+
+Amplicons are just containers for primers, so don't hold information directly. But, as well being able to access the contained primers, the following information can be inferred:
+
+- pool name ('no pool' given if amplicon not properly paired)
+- amplicon name (combines the forward and reverse primer names)
+- maximum amplicon span (includes primer sequence)
+- minimum amplicon span (excludes primer sequence)
+
+The primer scheme will pre-compute expected amplicons and store the mean span etc.
+
+#### finding closest primers given a position in the reference
+
+To find a the closest primers to a given reference coordinate, the primer scheme builds the following in addition to the maps of forward and reverse primers:
+
+- sorted vector of start coordinates for each forward primer in the scheme
+- sorted vector of end coordinates for each reverse primer in the scheme
+
+Both of these are vectors of pairs, where the first is the coordinate and the second is a key to lookup the corresponding primer in the map.
+
+Pseudocode for primer search:
+
+```cpp
+// X = sorted vector of start coordinates and primers for forward primers
+// Y = sorted vector of end coordinates and primers for reverse primers
+
+function findClosestPrimer(pos, coordinates) {
+
+    // get the first coordinate that is >= pos
+    primer = lower_bound(coordinates.begin(), coordinates.end(), pos)
+
+    // check coordinate is closer to pos than next smallest coordinate
+    if abs(primer->first - pos) <= abs(primer.previous()->first - pos)
+        return primer->second                   // primer name
+    else
+        return primer.previous()->second       // primer name
+}
+
+function findPrimerPair(pos) {
+
+    fPrimer = findClosestPrimer(pos, X)
+    rPrimer = findClosestPrimer(pos, Y)
+
+    return amplicon(fPrimer, rPrimer)       // return an amplicon
+}
+```
+
+#### check position containment in amplicon overlaps or primer sequences
+
+To check if a position is contained by multiple amplicons, or by a primer sequence, the primer scheme precomputes a list of locations to check against.
+
+To do this a [bit vector](https://en.wikipedia.org/wiki/Bit_array) is used to record presence/absence at each reference position. For recording amplicon overlap, every position covered by >1 amplicon has a bit set to 1. Another bit vector can be used to store all the locations where primers from a given pool are located etc.
+
+In practice a single bit vector is used where the bit vector length is equivalent to the reference genome size, multiplied by the number of containment checks offered by the scheme. The number of checks is used to offset the bit vector access. The bit vectors are initialised when the primer scheme is validated.
+
+Pseudocode for containment checks:
+
+```cpp
+// X = sorted vector of start coordinates and primers for forward primers
+// Y = sorted vector of end coordinates and primers for reverse primers
+// L = length of reference sequence
+// BV = the empty bit vector used to record positions
+
+// setBits is a helper function to set bits in a contiguous region of a bit vector
+function setBits(start, end) {
+    while start != end {
+        BV[start] = 1
+        start++
+    }
+}
+
+// createIndex sets up a bit vector with containment locations
+function createIndex() {
+
+    // initalise the bit vector to fit amplicon overlaps
+    // and primer locations for pools 1 and 2
+    BV = [0] * (L * 3)
+
+    // get the amplicon overlap locations
+    for i = 0; i < len(X)-1; i++ {
+        if X[i+1] < Y[i] {
+            setBits(Y[i], X[i+1])
+        }
+    }
+
+    // get the primer sequence locations
+    for primer in X and Y {
+        if primer in pool1 {
+            setBits((primer.start + (L * 1)), (primer.end + (L * 1)))
+        }
+        if primer in pool2 {
+            setBits((primer.start + (L * 2)), (primer.end + (L * 2)))
+        }
+    }
+}
+
+// queryContainment queries the bit vector
+function queryContainment(pos, type) {
+    if type == ampliconOverlap
+        return BV[pos + (L * 0)]
+    if type == primerPool1
+        return BV[pos + (L * 1)]
+    if type == primerPool2
+        return BV[pos + (L * 2)]
+}
+```
