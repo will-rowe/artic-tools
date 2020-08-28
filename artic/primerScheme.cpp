@@ -436,9 +436,21 @@ void artic::PrimerScheme::_validateScheme(void)
 artic::Amplicon::Amplicon(Primer* p1, Primer* p2)
     : _fPrimer(p1), _rPrimer(p2)
 {
+    // ensure p1 is forward and p2 is reverse
+    if (_fPrimer->IsForward() == _rPrimer->IsForward())
+        throw std::runtime_error("cannot create amplicon from primers with the same directionality");
+    if (!_fPrimer->IsForward())
+    {
+        _fPrimer = p2;
+        _rPrimer = p1;
+    }
+
+    // p1 must come before p2
+    if (_fPrimer->GetStart() >= _rPrimer->GetEnd())
+        throw std::runtime_error("cannnot create amplicon from outward facing primers");
+
     // set if properly paired
     _isProperlyPaired = (_fPrimer->GetBaseID() == _rPrimer->GetBaseID()) &&
-                        (_fPrimer->IsForward() != _rPrimer->IsForward()) &&
                         (_fPrimer->GetPrimerPoolID() == _rPrimer->GetPrimerPoolID());
 }
 
