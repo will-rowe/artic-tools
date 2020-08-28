@@ -7,5 +7,5 @@ nav:
                   - "Installation": "installation.md"
                   - "Commands": "commands.md"
         - About:
-                  - "Primer schemes": "primerscheme.md"
+                  - "Primer Schemes": "primerscheme.md"
                   - "Softmasking": "softmasker.md"
