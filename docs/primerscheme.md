@@ -25,7 +25,7 @@ The `artic pipeline` will also attempt to download a scheme using `artic tools` 
 
 ## File format
 
-Primer schemes produced by [Primal Scheme](https://primalscheme.com/) come with several files (which you can read more about [here](https://github.com/aresti/primalscheme#output)). The 2 files which are needed for `artic tools` are:
+Primer schemes produced by [Primal Scheme](https://primalscheme.com/) come with several files (which you can read more about [here](https://github.com/aresti/primalscheme#output)). The 2 files which are needed for `artic` are:
 
 | file extension      | description                                                                    |
 | ------------------- | ------------------------------------------------------------------------------ |
@@ -47,7 +47,7 @@ The `*.primer.bed` file is in 6-column BED format, with the following column des
 
 <sup>\*</sup> column 5 in the BED spec is an int for score, whereas here we are using it to denote primerPool.
 
-**Note**: BED format, which is a 0-based, half-open format. This means that reference sequence position counting starts at 0 and the chromEnd is not included in the primer sequence.
+**Note**: BED format is a 0-based, half-open format. This means that reference sequence position counting starts at 0 and the chromEnd is not included in the primer sequence.
 
 ## Scheme logic
 
@@ -57,7 +57,7 @@ The following sections will discuss how primer schemes are read from a `*.primer
 
 #### primers
 
-Each line in a `*.primer.bed` file is a single primer. Lines are processed one at a time and the input file does not to be sorted in any way beforehand (although most schemes are sorted by primer start coordinate). As lines are read, they are converted to primer objects.
+Each line in a `*.primer.bed` file is a single primer. Lines are processed one at a time and the input file does not need to be sorted in any way beforehand (although most schemes are sorted by primer start coordinate). As lines are read, they are converted to primer objects.
 
 Most of the logic behind creating a primer object relies on the primer name (column 4). As a primer line is read, we check for the following tags in the name field:
 
@@ -69,7 +69,7 @@ Most of the logic behind creating a primer object relies on the primer name (col
 
 **Important**:
 
-- tags are cases sensitive
+- tags are case sensitive
 - tags can be anywhere in the primer name but typically are placed at the end (e.g. REGION_42_RIGHT_alt)
 - a `_LEFT` or `_RIGHT` tag is required and only one is allowed per primer
 - the `_alt` tag is optional and denotes that the primer is an alternate version of another primer
@@ -93,11 +93,11 @@ We can also call several helper methods on the object for getting things such as
 
 #### schemes
 
-Once all lines in a `*.primer.bed` file have been read and converted to primer objects they are held in 2 unordered maps; one for forward primers and one for reverse primers. These are part of the in-memory scheme data structure which is used to access primers in the artic software.
-
-In addition to the primers themselves, the scheme also contains some extra information to enable validation and querying.
+Once all lines in a `*.primer.bed` file have been read and converted to primer objects they are held in a `scheme`. In `artic-tools`, this consists of 2 unordered maps, one for forward primers and one for reverse primers, as well as some additional datastructures to allow validation, index and query of schemes.
 
 ### Validating schemes
+
+>Note: the following sections apply to `artic-tools`
 
 On reading the scheme file, it will have satisified the following checks:
 
