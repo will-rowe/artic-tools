@@ -17,7 +17,7 @@ const std::string refExt = ".reference.fasta";
 const std::string baseURL = "https://github.com/artic-network/primer-schemes/raw/master/";
 const std::pair<std::string, std::string> ebovTags = {"ZaireEbola", "ZaireEbola"};
 const std::pair<std::string, std::string> nivTags = {"Nipah", "NiV_6_Malaysia"};
-const std::pair<std::string, std::string> scovTags = {"SARS-CoV-2", "nCoV-2019"};
+const std::pair<std::string, std::string> scovTags = {"nCoV-2019", "nCoV-2019"};
 
 // Scheme enum is used in the switch statement which constructs the download link
 enum Scheme
