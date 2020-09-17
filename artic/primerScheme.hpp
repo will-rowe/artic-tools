@@ -9,13 +9,29 @@
 
 namespace artic
 {
-    // DownloadScheme will download a specified primer scheme and the reference sequence.
-    void DownloadScheme(const std::string& schemeName, unsigned int requestedVersion, const std::string& outDir);
-
     class Primer;
     class PrimerScheme;
     class Amplicon;
     typedef std::unordered_map<std::string, Primer*> schemeMap;
+
+    // SchemeArgs is used to pass arguments to the scheme functions.
+    typedef struct SchemeArgs
+    {
+        std::string schemeName;
+        unsigned int schemeVersion;
+        std::string outDir;
+        std::string refSeqFile;     // fasta file with reference sequence
+        std::string schemeFile;     // bed file with primer coordinates
+        std::string primerSeqsFile; // fasta file with primer sequences
+        std::string insertsFile;    // bed file with insert coordinates
+    } SchemeArgs;
+
+    // DownloadScheme will download a specified primer scheme and the reference sequence.
+    void DownloadScheme(SchemeArgs& args);
+
+    // ValidateScheme will load and validate a specified primer scheme, log stats and return the primer scheme object.
+    // It will optionally write primer insert coordinates and primer sequences to files.
+    PrimerScheme ValidateScheme(SchemeArgs& args);
 
     //******************************************************************************
     // Primer class holds primer information.

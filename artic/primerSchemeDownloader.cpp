@@ -51,11 +51,11 @@ std::string resolveLink(const std::string& tag1, unsigned int version, const std
 
 // DownloadScheme will download a specified primer scheme and the reference sequence.
 // if 0 is provided as a version, or an unknown version provided, the latest scheme version will be used.
-void artic::DownloadScheme(const std::string& schemeName, unsigned int requestedVersion, const std::string& outDir)
+void artic::DownloadScheme(SchemeArgs& args)
 {
     std::string schemeURL;
-    unsigned int version = requestedVersion;
-    switch (resolveScheme(schemeName))
+    unsigned int version = args.schemeVersion;
+    switch (resolveScheme(args.schemeName))
     {
         case Ebov:
             if (version == 0 || version > maxEbolaVersion)
@@ -73,31 +73,30 @@ void artic::DownloadScheme(const std::string& schemeName, unsigned int requested
             schemeURL = resolveLink(scovTags.first, version, scovTags.second);
             break;
         default:
-            throw std::runtime_error("unknown scheme: " + schemeName);
+            throw std::runtime_error("unknown scheme: " + args.schemeName);
     }
-    artic::Log::Init("getter");
-    LOG_TRACE("starting scheme getter");
-    LOG_TRACE("\tscheme: {}", schemeName);
-    LOG_TRACE("\tversion: {}", requestedVersion);
-    if ((requestedVersion != version) && (requestedVersion != 0))
+    LOG_TRACE("\tscheme: {}", args.schemeName);
+    LOG_TRACE("\tversion: {}", args.schemeVersion);
+    if ((args.schemeVersion != version) && (args.schemeVersion != 0))
         LOG_WARN("requested scheme version not found, using latest version instead (v{})", version);
-    if (requestedVersion == 0)
+    if (args.schemeVersion == 0)
         LOG_WARN("requested latest scheme version, using v{}", version);
+    args.schemeVersion = version;
 
     // create filenames
     std::stringstream of;
-    if (outDir.size() != 0)
+    if (args.outDir.size() != 0)
     {
-        if (!boost::filesystem::is_directory(outDir) || !boost::filesystem::exists(outDir))
-            boost::filesystem::create_directories(outDir);
-        of << outDir << "/";
+        if (!boost::filesystem::is_directory(args.outDir) || !boost::filesystem::exists(args.outDir))
+            boost::filesystem::create_directories(args.outDir);
+        of << args.outDir << "/";
     }
-    of << schemeName << ".v" << version;
+    of << args.schemeName << ".v" << args.schemeVersion;
 
     // download using wget sys call
     LOG_TRACE("downloading data")
     std::stringstream baseCmd;
-    baseCmd << "wget -q -O " << schemeName << ".v" << version;
+    baseCmd << "wget -q -O " << args.schemeName << ".v" << args.schemeVersion;
     std::string cmd1 = "wget -q -O " + of.str() + schemeExt + " " + schemeURL + schemeExt + " 2>/dev/null";
     std::string cmd2 = "wget -q -O " + of.str() + refExt + " " + schemeURL + refExt + " 2>/dev/null";
     int res;
@@ -110,11 +109,7 @@ void artic::DownloadScheme(const std::string& schemeName, unsigned int requested
     LOG_TRACE("\t{}{}", of.str(), schemeExt);
     LOG_TRACE("\t{}{}", of.str(), refExt);
 
-    // validate the scheme
-    LOG_TRACE("checking scheme")
-    auto ps = artic::PrimerScheme(of.str() + schemeExt, version);
-    LOG_TRACE("\t{}", ps.GetReferenceName());
-    LOG_TRACE("\t{} primer pools", ps.GetPrimerPools().size());
-    LOG_TRACE("\t{} primers  (includes {} alts)", ps.GetNumPrimers(), ps.GetNumAlts());
-    LOG_TRACE("\t{} amplicons", ps.GetNumAmplicons());
+    // pass back the downloaded scheme via the args struct
+    args.schemeFile = of.str() + schemeExt;
+    args.refSeqFile = of.str() + refExt;
 }
