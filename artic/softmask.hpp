@@ -7,6 +7,16 @@
 
 #include "primerScheme.hpp"
 
+// MaskerError enum is used to describe common softmask warnings/errors.
+enum MaskerError
+{
+    NoError,
+    Err_Init,
+    Err_Unmapped,
+    Err_Supp,
+    Err_Qual,
+};
+
 namespace artic
 {
 
@@ -24,18 +34,19 @@ namespace artic
         void Run(bool verbose);
 
     private:
-        unsigned int _checkRecord(void);      // returns an error if the currently held record fails filters and should be skipped
+        MaskerError _checkRecord(void);       // returns an error if the currently held record fails filters and should be skipped
         unsigned int _getAmpliconCount(void); // returns the number of times the queried amplicon has been seen before
         void _reportLine(bool verbose);       // add the primer information for the current record to the open report
         void _softmask(bool maskPrimers);     // performs the CIGAR string adjustment for the current record
 
         // data holders
-        artic::PrimerScheme* _primerScheme; // the loaded primer scheme
-        htsFile* _inputBAM;                 // the input BAM for softmasking
-        bam_hdr_t* _bamHeader;              // the input BAM header
-        bam1_t* _curRec;                    // the current alignment record being processed
-        artic::Amplicon* _curAmplicon;      // the amplicon for the current alignment record
-        std::fstream _report;               // the report file
+        artic::PrimerScheme* _primerScheme;                          // the loaded primer scheme
+        htsFile* _inputBAM;                                          // the input BAM for softmasking
+        bam_hdr_t* _bamHeader;                                       // the input BAM header
+        bam1_t* _curRec;                                             // the current alignment record being processed
+        artic::Amplicon* _curAmplicon;                               // the amplicon for the current alignment record
+        std::unordered_map<std::string, artic::Amplicon> _amplicons; // map of amplicons
+        std::fstream _report;                                        // the report file
 
         // user parameters
         unsigned int _minMAPQ;   // the MAPQ threshold for keeping records

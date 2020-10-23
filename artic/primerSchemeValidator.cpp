@@ -11,7 +11,7 @@ artic::PrimerScheme artic::ValidateScheme(SchemeArgs& args)
     LOG_TRACE("reading scheme")
     if (args.schemeFile.size() == 0)
         LOG_ERROR("no primer scheme file was provided");
-    auto ps = artic::PrimerScheme(args.schemeFile, args.schemeVersion);
+    auto ps = artic::PrimerScheme(args.schemeFile);
 
     // get primer sequences if requested
     if (args.primerSeqsFile.size() != 0)
@@ -56,7 +56,7 @@ artic::PrimerScheme artic::ValidateScheme(SchemeArgs& args)
 
     // print the stats
     LOG_TRACE("collecting scheme stats");
-    LOG_TRACE("\tprimer scheme version:\t{}", ps.GetVersion());
+    LOG_TRACE("\tprimer scheme file:\t{}", ps.GetFileName());
     LOG_TRACE("\treference sequence:\t{}", ps.GetReferenceName());
     LOG_TRACE("\tnumber of pools:\t{}", ps.GetPrimerPools().size());
     LOG_TRACE("\tnumber of primers:\t{} (includes {} alts)", ps.GetNumPrimers(), ps.GetNumAlts());

@@ -51,7 +51,6 @@ int main(int argc, char** argv)
     bool verbose = false;
     softmaskCmd->add_option("-b,--bamFile", bamFile, "The input bam file (will try STDIN if not provided)");
     softmaskCmd->add_option("scheme", schemeArgs.schemeFile, "The ARTIC primer scheme")->required()->check(CLI::ExistingFile);
-    softmaskCmd->add_option("--schemeVersion", schemeArgs.schemeVersion, "The ARTIC primer scheme version (default = latest)");
     softmaskCmd->add_option("--minMAPQ", minMAPQ, "A minimum MAPQ threshold for processing alignments (default = 15)");
     softmaskCmd->add_option("--normalise", normalise, "Subsample to N coverage per strand (default = 100, deactivate with 0)");
     softmaskCmd->add_option("--report", outFileName, "Output an align_trim report to file");
@@ -63,7 +62,6 @@ int main(int argc, char** argv)
     // add amplitig options and flags
     amplitigCmd->add_option("-b,--bamFile", bamFile, "The input bam file (will try STDIN if not provided)");
     amplitigCmd->add_option("scheme", schemeArgs.schemeFile, "The ARTIC primer scheme")->required()->check(CLI::ExistingFile);
-    amplitigCmd->add_option("--schemeVersion", schemeArgs.schemeVersion, "The ARTIC primer scheme version (default = latest)");
     amplitigCmd->add_option("--minMAPQ", minMAPQ, "A minimum MAPQ threshold for processing alignments (default = 15)");
     amplitigCmd->add_option("--normalise", normalise, "Subsample to N coverage per strand (default = 100, deactivate with 0)");
     amplitigCmd->add_option("--report", outFileName, "Output an align_trim report to file");
@@ -90,7 +88,6 @@ int main(int argc, char** argv)
     bool dropOverlapFails = false;
     vcfFilterCmd->add_option("vcf", vcfIn, "The input VCF file to filter")->required()->check(CLI::ExistingFile);
     vcfFilterCmd->add_option("scheme", schemeArgs.schemeName, "The primer scheme to use")->required()->check(CLI::ExistingFile);
-    vcfFilterCmd->add_option("--schemeVersion", schemeArgs.schemeVersion, "The ARTIC primer scheme version (default = 3)");
     vcfFilterCmd->add_option("-o,--vcfOut", outFileName, "If provided, will write variants that pass checks");
     vcfFilterCmd->add_flag("--dropPrimerVars", dropPrimerVars, "Will drop variants called within primer regions for the pool");
     vcfFilterCmd->add_flag("--dropOverlapFails", dropOverlapFails, "Will drop variants called once within amplicon overlap regions");

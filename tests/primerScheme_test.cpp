@@ -6,7 +6,6 @@
 using namespace artic;
 
 // some test parameters
-const unsigned int version = 3;
 const unsigned int numPools = 2;
 const unsigned int numPrimers = 218;
 const unsigned int numAlts = 22;
@@ -23,7 +22,7 @@ TEST(primerscheme, constructor)
     // catch no file
     try
     {
-        artic::PrimerScheme("", version);
+        auto ps = artic::PrimerScheme("");
         FAIL() << "expected a no file error";
     }
     catch (std::runtime_error& err)
@@ -38,7 +37,7 @@ TEST(primerscheme, constructor)
     // constructor should pass
     try
     {
-        artic::PrimerScheme(inputScheme, 3);
+        auto ps = artic::PrimerScheme(inputScheme);
     }
     catch (...)
     {
@@ -49,8 +48,7 @@ TEST(primerscheme, constructor)
 // scheme validity
 TEST(primerscheme, validity)
 {
-    auto ps = artic::PrimerScheme(inputScheme, 3);
-    EXPECT_EQ(ps.GetVersion(), version);
+    auto ps = artic::PrimerScheme(inputScheme);
     EXPECT_EQ(ps.GetNumPrimers(), numPrimers);
     EXPECT_EQ(ps.GetNumAlts(), numAlts);
     EXPECT_EQ(ps.GetNumAmplicons(), numAmplicons);
@@ -60,7 +58,7 @@ TEST(primerscheme, validity)
 // primer access
 TEST(primerscheme, access)
 {
-    auto ps = artic::PrimerScheme(inputScheme, 3);
+    auto ps = artic::PrimerScheme(inputScheme);
 
     // get a couple of primer pairs and check if they are properly paired etc.
     try
@@ -106,7 +104,7 @@ TEST(primerscheme, access)
 // primer sites
 TEST(primerscheme, primersites)
 {
-    auto ps = artic::PrimerScheme(inputScheme, 3);
+    auto ps = artic::PrimerScheme(inputScheme);
     bool primerSite;
 
     // check out of bounds
@@ -133,7 +131,7 @@ TEST(primerscheme, primersites)
 // primer sequence
 TEST(primerscheme, primerseq)
 {
-    auto ps = artic::PrimerScheme(inputScheme, 3);
+    auto ps = artic::PrimerScheme(inputScheme);
     auto pp = ps.FindPrimers(40, 400);
     auto p1 = pp.GetForwardPrimer();
     faidx_t* fai = fai_load(reference.c_str());

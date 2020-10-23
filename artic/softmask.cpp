@@ -8,20 +8,22 @@
 #include "log.hpp"
 #include "softmask.hpp"
 
+const artic::kmer_t K_SIZE = 31;
+
 // getErrorMsg returns the error message for the softmasker error codes.
-const char* getErrorMsg(int errorCode)
+const char* getErrorMsg(MaskerError errorCode)
 {
     switch (errorCode)
     {
-        case 0:
+        case NoError:
             return "no error";
-        case 1:
+        case Err_Init:
             return "softmasker is uninitialised";
-        case 2:
+        case Err_Unmapped:
             return "skipped as unmapped";
-        case 3:
+        case Err_Supp:
             return "skipped as supplementary";
-        case 4:
+        case Err_Qual:
             return "skipped as poor quality";
         default:
             return "unknown error";
@@ -29,17 +31,17 @@ const char* getErrorMsg(int errorCode)
 }
 
 // _checkRecord returns an error if the currently held record fails filters and should be skipped.
-unsigned int artic::Softmasker::_checkRecord(void)
+MaskerError artic::Softmasker::_checkRecord(void)
 {
     if (!_curRec)
-        return 1;
+        return Err_Init;
     if (_curRec->core.flag & BAM_FUNMAP)
-        return 2;
+        return Err_Unmapped;
     if (_curRec->core.flag & BAM_FSUPPLEMENTARY)
-        return 3;
+        return Err_Supp;
     if (_curRec->core.qual < _minMAPQ)
-        return 4;
-    return 0;
+        return Err_Qual;
+    return NoError;
 }
 
 // _getAmpliconCount returns the number of times the queried amplicon has been seen before.
@@ -56,7 +58,7 @@ unsigned int artic::Softmasker::_getAmpliconCount(void)
         _ampliconCounter.emplace(ampliconCounterKey, 1);
         return 1;
     }
-    return ++mapIter->second;
+    return mapIter->second++;
 }
 
 // _reportLine will add the primer information for the current record to the open report.
@@ -152,6 +154,10 @@ artic::Softmasker::Softmasker(artic::PrimerScheme* primerScheme, const std::stri
     _filterDroppedCounter = 0;
     _normaliseDroppedCounter = 0;
     _trimCounter = 0;
+
+    // get the expected amplicons
+    for (auto amplicon : _primerScheme->GetExpAmplicons())
+        _amplicons.emplace(amplicon.GetID(), amplicon);
 }
 
 // Softmasker destructor.
@@ -170,10 +176,8 @@ artic::Softmasker::~Softmasker(void)
 // Run will perform the softmasking on the open BAM file.
 void artic::Softmasker::Run(bool verbose)
 {
-    artic::Log::Init("softmasker");
-    LOG_INFO("starting softmasking");
     if (_maskPrimerStart)
-        LOG_INFO("include primers in softmask: true");
+        LOG_INFO("include primers in amplicon: true");
 
     // open up a new BAM for the output
     htsFile* outBam = hts_open("-", "wb");
@@ -219,9 +223,32 @@ void artic::Softmasker::Run(bool verbose)
         if (_report || verbose)
             _reportLine(verbose);
 
-        //
-        // TODO: collect k-mer frequencies
-        //
+        /*
+        // check amplicon is in the scheme
+        if (auto amp = _amplicons.find(_curAmplicon->GetID()); amp != _amplicons.end())
+        {
+            // get the read
+            uint32_t l = _curRec->core.l_qseq;
+            char* read = new char[l + 1];
+            uint8_t* q = bam_get_seq(_curRec);
+            for (uint32_t i = 0; i < l; i++)
+            {
+                read[i] = seq_nt16_str[bam_seqi(q, i)]; //gets nucleotide id and converts them into IUPAC id.
+            }
+            read[l] = '\0'; // null terminate
+            LOG_TRACE("{}", read);
+
+            //TODO:
+            // don't need to get the read here - it's already encoded in some form for htslib
+            // also don't need to malloc read each loop, just have a holder to resize?
+            // should look at just using the bases within the softclip
+
+            // add k-mers to the amplicon
+            amp->second.AddKmers(read, l, K_SIZE);
+
+            delete[] read;
+        }
+        */
 
         // stop processing the alignment record if normalise threshold reached for this amplicon
         if (_getAmpliconCount() >= _normalise)

@@ -75,12 +75,12 @@ void artic::DownloadScheme(SchemeArgs& args)
         default:
             throw std::runtime_error("unknown scheme: " + args.schemeName);
     }
-    LOG_TRACE("\tscheme: {}", args.schemeName);
-    LOG_TRACE("\tversion: {}", args.schemeVersion);
+    LOG_TRACE("\trequested scheme:\t{}", args.schemeName);
+    LOG_TRACE("\trequested version:\t{}", args.schemeVersion);
     if ((args.schemeVersion != version) && (args.schemeVersion != 0))
-        LOG_WARN("requested scheme version not found, using latest version instead (v{})", version);
+        LOG_WARN("\trequested version not found (v{}), using latest version instead (v{})", args.schemeVersion, version);
     if (args.schemeVersion == 0)
-        LOG_WARN("requested latest scheme version, using v{}", version);
+        LOG_WARN("\trequested latest scheme version, using v{}", version);
     args.schemeVersion = version;
 
     // create filenames

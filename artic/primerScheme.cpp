@@ -101,10 +101,10 @@ const std::string artic::Primer::GetSeq(faidx_t* reference, const std::string& r
 }
 
 // PrimerScheme constructor.
-artic::PrimerScheme::PrimerScheme(const std::string& inputFile, unsigned int schemeVersion)
-    : _version(schemeVersion)
+artic::PrimerScheme::PrimerScheme(const std::string& inputFile)
+    : _filename(inputFile)
 {
-    _loadScheme(inputFile);
+    _loadScheme(_filename);
     _validateScheme();
 }
 
@@ -124,8 +124,8 @@ artic::PrimerScheme::~PrimerScheme(void)
     }
 }
 
-// GetVersion returns the primer scheme version.
-unsigned int artic::PrimerScheme::GetVersion(void) { return _version; }
+// GetFileName returns the filename that the primer scheme was loaded from.
+const std::string& artic::PrimerScheme::GetFileName(void) const { return _filename; }
 
 // GetReferenceName returns the reference sequence ID found in the primer scheme.
 const std::string& artic::PrimerScheme::GetReferenceName(void) const { return _referenceID; }
@@ -481,3 +481,10 @@ const artic::Primer* artic::Amplicon::GetForwardPrimer(void) { return _fPrimer; 
 
 // GetReversePrimer returns a pointer to the reverse primer in the amplicon.
 const artic::Primer* artic::Amplicon::GetReversePrimer(void) { return _rPrimer; }
+
+// AddKmers adds the k-mers from a sequence to the amplicon.
+void artic::Amplicon::AddKmers(const char* seq, uint32_t seqLen, uint32_t kSize)
+{
+    artic::getEncodedKmers(seq, seqLen, kSize, _kmers);
+    return;
+}
