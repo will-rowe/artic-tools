@@ -10,7 +10,7 @@ namespace artic
     typedef uint64_t kmer_t;
 
     // kmerset is a container for kmers.
-    typedef std::unordered_multiset<kmer_t> kmerset_t;
+    typedef std::vector<kmer_t> kmerset_t;
 
     // MAX_K_SIZE is the maximum k-mer size permitted (based on 2-bit encoding of bases)
     const uint32_t MAX_K_SIZE = sizeof(kmer_t) * 4;
@@ -38,20 +38,20 @@ namespace artic
     // char2nt is a lookup to convert integers to nucleotides.
     const uint8_t char2nt[5] = {'A', 'C', 'G', 'T', 'N'};
 
-    // getEncodedKmers will compute and integer encode all canonical k-mers in a sequence.
-    void getEncodedKmers(const char* seq, uint32_t seqLen, uint32_t kSize, kmerset_t& kmers);
+    // GetEncodedKmers will compute and integer encode all canonical k-mers in a sequence, adding them to the provided container.
+    void GetEncodedKmers(const char* seq, uint32_t seqLen, uint32_t kSize, kmerset_t& kmers);
 
-    // getRCencoding will reverse complement an encoded k-mer and get it's reverse complement.
-    kmer_t getRCencoding(kmer_t encodedKmer, uint32_t kSize);
+    // GetRCencoding will reverse complement an encoded k-mer.
+    kmer_t GetRCencoding(kmer_t encodedKmer, uint32_t kSize);
 
-    // getNextKmers will return the 4 possible next k-mers (based on actg alphabet).
-    void getNextKmers(kmer_t encodedKmer, uint32_t kSize, kmer_t& nextA, kmer_t& nextB, kmer_t& nextC, kmer_t& nextD);
+    // GetNextKmers will return the 4 possible next k-mers (based on actg alphabet).
+    void GetNextKmers(kmer_t encodedKmer, uint32_t kSize, kmer_t& nextA, kmer_t& nextB, kmer_t& nextC, kmer_t& nextD);
 
-    // decodeKmer will decode an integer encoded k-mer.
-    void decodeKmer(kmer_t encodedKmer, uint32_t kSize, std::string& decodedKmer);
+    // DecodeKmer will decode an integer encoded k-mer.
+    void DecodeKmer(kmer_t encodedKmer, uint32_t kSize, std::string& decodedKmer);
 
-    // decodeKmer_rc will decode an integer encoded k-mer to it's reverse complement.
-    void decodeKmer_rc(kmer_t encodedKmer, uint32_t kSize, std::string& decodedKmer);
+    // DecodeKmer_rc will decode an integer encoded k-mer to it's reverse complement.
+    void DecodeKmer_rc(kmer_t encodedKmer, uint32_t kSize, std::string& decodedKmer);
 
 } // namespace artic
 

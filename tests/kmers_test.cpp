@@ -19,30 +19,30 @@ TEST(kmers, rc)
 {
     std::string a;
     std::string b;
-    artic::decodeKmer(expectedEncoding, kSize, a);
-    artic::decodeKmer_rc(expectedEncoding, kSize, b);
+    artic::DecodeKmer(expectedEncoding, kSize, a);
+    artic::DecodeKmer_rc(expectedEncoding, kSize, b);
     ASSERT_TRUE(a != b);
     ASSERT_TRUE(a == kmer1);
     ASSERT_TRUE(b == kmer1_rc);
 }
 
-// check that successive k-mer permutations returned by getNextKmers.
+// check that successive k-mer permutations returned by GetNextKmers.
 TEST(kmers, nextKmers)
 {
     kmer_t a;
     kmer_t b;
     kmer_t c;
     kmer_t d;
-    artic::getNextKmers(expectedEncoding, kSize, a, b, c, d);
+    artic::GetNextKmers(expectedEncoding, kSize, a, b, c, d);
 
     std::string as;
     std::string bs;
     std::string cs;
     std::string ds;
-    artic::decodeKmer(a, kSize, as);
-    artic::decodeKmer(b, kSize, bs);
-    artic::decodeKmer(c, kSize, cs);
-    artic::decodeKmer(d, kSize, ds);
+    artic::DecodeKmer(a, kSize, as);
+    artic::DecodeKmer(b, kSize, bs);
+    artic::DecodeKmer(c, kSize, cs);
+    artic::DecodeKmer(d, kSize, ds);
 
     ASSERT_TRUE(as == ("CGTAA"));
     ASSERT_TRUE(bs == ("CGTAC"));
@@ -56,28 +56,29 @@ TEST(kmers, encoding)
     artic::kmerset_t kmers;
 
     // get the first k-mer and check it produces the correct encoding
-    artic::getEncodedKmers(sequence.substr(0, kSize).c_str(), kSize, kSize, kmers);
+    artic::GetEncodedKmers(sequence.substr(0, kSize).c_str(), kSize, kSize, kmers);
     ASSERT_TRUE(kmers.size() == 1);
-    ASSERT_TRUE(kmers.find(expectedEncoding) != kmers.end());
-    ASSERT_TRUE(kmers.count(expectedEncoding) == 1);
+    ASSERT_TRUE(kmers.front() == expectedEncoding);
 
-    // add the same k-mer again and check it's added to the multiset
-    artic::getEncodedKmers(sequence.substr(0, kSize).c_str(), kSize, kSize, kmers);
-    ASSERT_TRUE(kmers.count(expectedEncoding) == 2);
+    // add the same k-mer again and check it's added
+    artic::GetEncodedKmers(sequence.substr(0, kSize).c_str(), kSize, kSize, kmers);
+    ASSERT_TRUE(kmers.size() == 2);
+    ASSERT_TRUE(kmers.back() == expectedEncoding);
 
     // add the same k-mer but uppercase to check that function is case insensitive
-    artic::getEncodedKmers(seqUpper.substr(0, kSize).c_str(), kSize, kSize, kmers);
-    ASSERT_TRUE(kmers.count(expectedEncoding) == 3);
+    artic::GetEncodedKmers(seqUpper.substr(0, kSize).c_str(), kSize, kSize, kmers);
+    ASSERT_TRUE(kmers.size() == 3);
+    ASSERT_TRUE(kmers.back() == expectedEncoding);
 
     // empty the set and then the whole sequence
     kmers.clear();
-    artic::getEncodedKmers(sequence.c_str(), sequence.size(), kSize, kmers);
+    artic::GetEncodedKmers(sequence.c_str(), sequence.size(), kSize, kmers);
     ASSERT_TRUE(kmers.size() == expectedKmerTotal);
 
     // catch k-mer size error
     try
     {
-        artic::getEncodedKmers(sequence.c_str(), sequence.size(), artic::MAX_K_SIZE + 1, kmers);
+        artic::GetEncodedKmers(sequence.c_str(), sequence.size(), artic::MAX_K_SIZE + 1, kmers);
         FAIL() << "expected a k-mer size error";
     }
     catch (std::runtime_error& err)
@@ -95,8 +96,8 @@ TEST(kmers, encoding)
     for (auto kmer : kmers)
     {
         ASSERT_TRUE(kmer != 0);
-        artic::decodeKmer(kmer, kSize, decoded);
-        artic::decodeKmer_rc(kmer, kSize, decoded_rc);
+        artic::DecodeKmer(kmer, kSize, decoded);
+        artic::DecodeKmer_rc(kmer, kSize, decoded_rc);
         std::cerr << "kmer int: " << std::to_string(kmer) << " kmer strings: " << decoded << "," << decoded_rc << std::endl;
     }
 }

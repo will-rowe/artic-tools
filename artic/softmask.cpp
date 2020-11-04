@@ -8,8 +8,6 @@
 #include "log.hpp"
 #include "softmask.hpp"
 
-const artic::kmer_t K_SIZE = 31;
-
 // getErrorMsg returns the error message for the softmasker error codes.
 const char* getErrorMsg(MaskerError errorCode)
 {
@@ -47,7 +45,7 @@ MaskerError artic::Softmasker::_checkRecord(void)
 // _getAmpliconCount returns the number of times the queried amplicon has been seen before.
 unsigned int artic::Softmasker::_getAmpliconCount(void)
 {
-    std::string ampliconCounterKey = _curAmplicon->GetID();
+    std::string ampliconCounterKey = _curAmplicon->GetName();
     if (_curRec->core.flag & BAM_FREVERSE)
     {
         ampliconCounterKey.append("_reverse");
@@ -73,7 +71,7 @@ void artic::Softmasker::_reportLine(bool verbose)
 
     // get the info ready
     std::ostringstream buffer;
-    buffer << bam_get_qname(_curRec) << "\t" << _curRec->core.pos << "\t" << bam_endpos(_curRec) << "\t" << _curAmplicon->GetID() << "\t" << _curAmplicon->GetForwardPrimer()->GetID() << "\t" << p1Start << "\t" << _curAmplicon->GetReversePrimer()->GetID() << "\t" << p2Start << "\t";
+    buffer << bam_get_qname(_curRec) << "\t" << _curRec->core.pos << "\t" << bam_endpos(_curRec) << "\t" << _curAmplicon->GetName() << "\t" << _curAmplicon->GetForwardPrimer()->GetName() << "\t" << p1Start << "\t" << _curAmplicon->GetReversePrimer()->GetName() << "\t" << p2Start << "\t";
     (_curRec->core.flag & BAM_FSECONDARY) ? buffer << "True\t" : buffer << "False\t";
     (_curRec->core.flag & BAM_FSUPPLEMENTARY) ? buffer << "True\t" : buffer << "False\t";
     buffer << maxSpan.first << "\t" << maxSpan.second << "\t" << _curAmplicon->IsProperlyPaired();
@@ -157,7 +155,7 @@ artic::Softmasker::Softmasker(artic::PrimerScheme* primerScheme, const std::stri
 
     // get the expected amplicons
     for (auto amplicon : _primerScheme->GetExpAmplicons())
-        _amplicons.emplace(amplicon.GetID(), amplicon);
+        _amplicons.emplace(amplicon.GetName(), amplicon);
 }
 
 // Softmasker destructor.
@@ -214,7 +212,7 @@ void artic::Softmasker::Run(bool verbose)
 
         if (_removeBadPairs && !_curAmplicon->IsProperlyPaired())
         {
-            LOG_WARN("{} skipped as not correctly paired ({})", bam_get_qname(_curRec), _curAmplicon->GetID());
+            LOG_WARN("{} skipped as not correctly paired ({})", bam_get_qname(_curRec), _curAmplicon->GetName());
             _filterDroppedCounter++;
             continue;
         }
@@ -225,7 +223,7 @@ void artic::Softmasker::Run(bool verbose)
 
         /*
         // check amplicon is in the scheme
-        if (auto amp = _amplicons.find(_curAmplicon->GetID()); amp != _amplicons.end())
+        if (auto amp = _amplicons.find(_curAmplicon->GetName()); amp != _amplicons.end())
         {
             // get the read
             uint32_t l = _curRec->core.l_qseq;

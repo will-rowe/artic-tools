@@ -41,7 +41,7 @@ int main(int argc, char** argv)
     schemeArgs.schemeVersion = 0; // indicates latest scheme available
 
     // add softmask/amplitiger options and flags
-    std::string bamFile;
+    std::string inputFile;
     std::string outFileName;
     unsigned int minMAPQ = 15;
     unsigned int normalise = 100;
@@ -49,7 +49,7 @@ int main(int argc, char** argv)
     bool removeBadPairs = false;
     bool noReadGroups = false;
     bool verbose = false;
-    softmaskCmd->add_option("-b,--bamFile", bamFile, "The input bam file (will try STDIN if not provided)");
+    softmaskCmd->add_option("-b,--inputFile", inputFile, "The input BAM file (will try STDIN if not provided)");
     softmaskCmd->add_option("scheme", schemeArgs.schemeFile, "The ARTIC primer scheme")->required()->check(CLI::ExistingFile);
     softmaskCmd->add_option("--minMAPQ", minMAPQ, "A minimum MAPQ threshold for processing alignments (default = 15)");
     softmaskCmd->add_option("--normalise", normalise, "Subsample to N coverage per strand (default = 100, deactivate with 0)");
@@ -60,14 +60,9 @@ int main(int argc, char** argv)
     softmaskCmd->add_flag("--verbose", verbose, "Output debugging information to STDERR");
 
     // add amplitig options and flags
-    amplitigCmd->add_option("-b,--bamFile", bamFile, "The input bam file (will try STDIN if not provided)");
+    amplitigCmd->add_option("-i,--fastqFile", inputFile, "The input FASTQ file (will try STDIN if not provided)");
     amplitigCmd->add_option("scheme", schemeArgs.schemeFile, "The ARTIC primer scheme")->required()->check(CLI::ExistingFile);
-    amplitigCmd->add_option("--minMAPQ", minMAPQ, "A minimum MAPQ threshold for processing alignments (default = 15)");
-    amplitigCmd->add_option("--normalise", normalise, "Subsample to N coverage per strand (default = 100, deactivate with 0)");
-    amplitigCmd->add_option("--report", outFileName, "Output an align_trim report to file");
-    amplitigCmd->add_flag("--start", primerStart, "Trim to start of primers instead of ends");
-    amplitigCmd->add_flag("--remove-incorrect-pairs", removeBadPairs, "Remove amplicons with incorrect primer pairs");
-    amplitigCmd->add_flag("--no-read-groups", noReadGroups, "Do not divide reads into groups in SAM output");
+    amplitigCmd->add_option("-r,--refSeq", schemeArgs.refSeqFile, "The reference sequence for the primer scheme (FASTA format)");
     amplitigCmd->add_flag("--verbose", verbose, "Output debugging information to STDERR");
 
     // add get options and flags
@@ -99,23 +94,20 @@ int main(int argc, char** argv)
         artic::Log::Init("align_trim");
         LOG_TRACE("starting align trim");
         auto ps = artic::ValidateScheme(schemeArgs);
-        auto masker = artic::Softmasker(&ps, bamFile, userCmd.str(), minMAPQ, normalise, removeBadPairs, noReadGroups, primerStart, outFileName);
+        auto masker = artic::Softmasker(&ps, inputFile, userCmd.str(), minMAPQ, normalise, removeBadPairs, noReadGroups, primerStart, outFileName);
         masker.Run(verbose);
     });
 
-    // add the amplitiger callback
+    // add the amplitigger callback
     // 1. vadlidate the primer scheme
-    // 2. run the softmasker
-    // 3. collect k-mers
-    // 4. run amplitiger
+    // 2. collect the primer k-mers
+    // 2. run the amplitiger
     amplitigCmd->callback([&]() {
         artic::Log::Init("get_amplitigs");
         LOG_TRACE("starting amplitigger");
         auto ps = artic::ValidateScheme(schemeArgs);
-        auto masker = artic::Softmasker(&ps, bamFile, userCmd.str(), minMAPQ, normalise, removeBadPairs, noReadGroups, primerStart, outFileName);
-        masker.Run(verbose);
-
-        // next up: collect the k-mer containers for each amplicon
+        //auto amplitigger = artic::Softmasker(&ps, inputFile, userCmd.str());
+        //amplitigger.Run(verbose);
     });
 
     // add the getter callback

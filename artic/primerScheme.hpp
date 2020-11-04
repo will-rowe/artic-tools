@@ -64,8 +64,8 @@ namespace artic
         // GetLen returns the length of the primer sequence.
         unsigned int GetLen(void) const;
 
-        // GetID returns the primerID.
-        const std::string& GetID(void) const;
+        // GetName returns the primerID.
+        const std::string& GetName(void) const;
 
         // GetBaseID returns the baseID of the primer (with _LEFT/_RIGHT stripped).
         std::string GetBaseID(void) const;
@@ -77,7 +77,7 @@ namespace artic
         bool IsForward(void);
 
         // GetSeq returns the primer sequence from a reference.
-        const std::string GetSeq(faidx_t* reference, const std::string& refID) const;
+        void GetSeq(faidx_t* reference, const std::string& refID, std::string& primerSeq) const;
 
     private:
         int64_t _start;        // the reference start position of the primer (0-based, half-open)
@@ -138,6 +138,9 @@ namespace artic
         // GetExpAmplicons returns a vector containing the amplicons the scheme expects to produce.
         const std::vector<Amplicon>& GetExpAmplicons(void);
 
+        // GetAmpliconName returns a string name for an amplicon in the scheme, based on the provided amplicon int ID.
+        const std::string GetAmpliconName(unsigned int id);
+
         // FindPrimers returns pointers to the nearest forward and reverse primer, given an alignment segment's start and end position.
         Amplicon FindPrimers(int64_t segStart, int64_t segEnd);
 
@@ -146,6 +149,9 @@ namespace artic
 
         // CheckPrimerSite returns true if the queried position is a primer site for the given pool.
         bool CheckPrimerSite(int64_t pos, const std::string& poolName);
+
+        // GetPrimerKmers will int encode k-mers from all primers in the scheme and deposit them in the provided map, linked to their amplicon primer origin(s).
+        void GetPrimerKmers(const std::string& reference, uint32_t kSize, std::unordered_map<artic::kmer_t, std::vector<unsigned int>>& kmerMap);
 
     private:
         void _loadScheme(const std::string& filename);                  // _loadScheme will load an input file and create the primer objects.
@@ -175,13 +181,16 @@ namespace artic
     {
     public:
         // Amplicon constructor.
-        Amplicon(Primer* p1, Primer* p2);
+        Amplicon(Primer* p1, Primer* p2, unsigned int id);
 
         // IsProperlyPaired returns true if the amplicon primers are properly paired.
         bool IsProperlyPaired(void);
 
-        // GetID returns the ID string of the primer pair (combines primer IDs).
-        const std::string GetID(void) const;
+        // GetName returns the name for the amplicon (combines primer IDs).
+        const std::string GetName(void) const;
+
+        // GetID returns the numberical ID for the amplicon.
+        unsigned int GetID(void) const;
 
         // GetPrimerPool returns the pool ID for the primer pair (0 returned if not properly paired).
         std::size_t GetPrimerPoolID(void);
@@ -205,6 +214,7 @@ namespace artic
         Primer* _fPrimer;        // pointer to the forward primer object
         Primer* _rPrimer;        // pointer to the reverse primer object
         bool _isProperlyPaired;  // denotes if amplicon has properly paired primers
+        unsigned int _id;        // the amplicon identifier
         artic::kmerset_t _kmers; // the set of k-mers for this amplicon
     };
 

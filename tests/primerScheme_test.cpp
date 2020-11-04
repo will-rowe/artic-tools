@@ -10,6 +10,7 @@ const unsigned int numPools = 2;
 const unsigned int numPrimers = 218;
 const unsigned int numAlts = 22;
 const unsigned int numAmplicons = 98;
+const unsigned int kSize = 11;
 const std::string pool1 = "nCoV-2019_1";
 const std::string pool2 = "nCoV-2019_2";
 const std::string reference = std::string(TEST_DATA_PATH) + "SCoV2.reference.fasta";
@@ -64,7 +65,7 @@ TEST(primerscheme, access)
     try
     {
         auto pp = ps.FindPrimers(40, 400);
-        auto id = pp.GetID();
+        auto id = pp.GetName();
         ASSERT_TRUE(pp.IsProperlyPaired());
         EXPECT_EQ(id, std::string("nCoV-2019_1_LEFT_nCoV-2019_1_RIGHT"));
 
@@ -74,7 +75,7 @@ TEST(primerscheme, access)
         EXPECT_EQ(retPoolName, pool1);
 
         auto pp2 = ps.FindPrimers(4046, 4450);
-        auto id2 = pp2.GetID();
+        auto id2 = pp2.GetName();
         auto span = pp2.GetMaxSpan();
         std::cout << id2 << std::endl;
         ASSERT_TRUE(pp2.IsProperlyPaired());
@@ -135,9 +136,28 @@ TEST(primerscheme, primerseq)
     auto pp = ps.FindPrimers(40, 400);
     auto p1 = pp.GetForwardPrimer();
     faidx_t* fai = fai_load(reference.c_str());
-    auto seq = p1->GetSeq(fai, ps.GetReferenceName());
+    std::string seq;
+    p1->GetSeq(fai, ps.GetReferenceName(), seq);
     if (fai)
         fai_destroy(fai);
     EXPECT_EQ(seq.size(), p1->GetLen());
     EXPECT_STREQ("ACCAACCAACTTTCGATCTCTTGT", seq.c_str());
+}
+
+// primer kmers
+TEST(primerscheme, kmers)
+{
+    auto ps = artic::PrimerScheme(inputScheme);
+    std::unordered_map<artic::kmer_t, std::vector<unsigned int>> kmerMap;
+    ps.GetPrimerKmers(reference, kSize, kmerMap);
+    for (auto x : kmerMap)
+    {
+        std::string decoded;
+        artic::DecodeKmer(x.first, kSize, decoded);
+        std::cerr << "kmer hash: " << x.first << " --- " << decoded << std::endl;
+        for (auto y : x.second)
+        {
+            std::cerr << "\tlocated in amplicon: " << y << " --- " << ps.GetAmpliconName(y) << std::endl;
+        }
+    }
 }

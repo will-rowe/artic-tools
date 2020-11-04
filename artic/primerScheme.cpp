@@ -69,8 +69,8 @@ int64_t artic::Primer::GetEnd(void) const { return _end; }
 // GetLen returns the length of the primer sequence.
 unsigned int artic::Primer::GetLen(void) const { return _end - _start; }
 
-// GetID returns the primerID.
-const std::string& artic::Primer::GetID(void) const { return _primerID; }
+// GetName returns the primerID.
+const std::string& artic::Primer::GetName(void) const { return _primerID; }
 
 // GetBaseID returns the baseID of the primer (with no alt or LEFT/RIGHT tag).
 std::string artic::Primer::GetBaseID(void) const { return _primerID.substr(0, _baseIDit); }
@@ -82,7 +82,7 @@ size_t artic::Primer::GetPrimerPoolID(void) const { return _poolID; }
 bool artic::Primer::IsForward(void) { return _isForward; }
 
 // GetSeq returns the primer sequence from a reference.
-const std::string artic::Primer::GetSeq(faidx_t* reference, const std::string& refID) const
+void artic::Primer::GetSeq(faidx_t* reference, const std::string& refID, std::string& primerSeq) const
 {
     if (!reference)
         throw std::runtime_error("no reference fasta provided");
@@ -97,7 +97,8 @@ const std::string artic::Primer::GetSeq(faidx_t* reference, const std::string& r
         throw std::runtime_error("cannot fetch the reference sequence");
     if (len != int(GetLen()))
         throw std::runtime_error("did not fetch correct number of primer bases (got " + std::to_string(len) + ")");
-    return seq;
+    primerSeq = seq;
+    return;
 }
 
 // PrimerScheme constructor.
@@ -173,12 +174,16 @@ int64_t artic::PrimerScheme::GetRefEnd(void) { return _refEnd; }
 unsigned int artic::PrimerScheme::GetNumOverlaps(void) { return _ampliconOverlaps.count(); }
 
 // GetExpAmplicons returns a vector to the amplicons the scheme expects to produce.
-const std::vector<artic::Amplicon>& artic::PrimerScheme::GetExpAmplicons(void)
+const std::vector<artic::Amplicon>& artic::PrimerScheme::GetExpAmplicons(void) { return _expAmplicons; }
+
+// GetAmpliconName returns a string name for an amplicon in the scheme, based on the provided amplicon int ID.
+const std::string artic::PrimerScheme::GetAmpliconName(unsigned int id)
 {
-    std::sort(_expAmplicons.begin(), _expAmplicons.end(), [](auto& lhs, auto& rhs) {
-        return lhs.GetForwardPrimer()->GetEnd() < rhs.GetForwardPrimer()->GetEnd();
-    });
-    return _expAmplicons;
+    if (id == 0)
+        return "unassigned";
+    if (id > _numAmplicons)
+        throw std::runtime_error("provided amplicon ID exceeds number of amplicons in the scheme");
+    return _expAmplicons.at(id - 1).GetName();
 }
 
 // FindPrimers returns a primer pair with the nearest forward and reverse primer for a given segment start and end.
@@ -217,7 +222,9 @@ artic::Amplicon artic::PrimerScheme::FindPrimers(int64_t segStart, int64_t segEn
     schemeMap::iterator j = _rPrimers.find(rPrimerID);
     if ((i == _fPrimers.end()) || (j == _rPrimers.end()))
         throw std::runtime_error("primer dropped from scheme - " + fPrimerID + " & " + rPrimerID);
-    return Amplicon(i->second, j->second);
+
+    // return an amplicon with no ID (0) as this is not guarenteed to be an expected scheme amplicon
+    return Amplicon(i->second, j->second, 0);
 }
 
 // CheckAmpliconOverlap returns true if the queried position is covered by multiple primers.
@@ -235,6 +242,39 @@ bool artic::PrimerScheme::CheckPrimerSite(int64_t pos, const std::string& poolNa
         throw std::runtime_error("query position outside of primer scheme bounds");
     auto poolID = GetPrimerPoolID(poolName);
     return _primerSites.test(pos + (_refEnd * poolID));
+}
+
+// GetPrimerKmers will int encode k-mers from all primers in the scheme and deposit them in the provided map, linked to their amplicon primer origin(s).
+void artic::PrimerScheme::GetPrimerKmers(const std::string& reference, uint32_t kSize, std::unordered_map<artic::kmer_t, std::vector<unsigned int>>& kmerMap)
+{
+    if (reference.size() == 0)
+        throw std::runtime_error("no reference sequence provided, can't output primer sequences");
+    std::string seq;
+    artic::kmerset_t kmers;
+    faidx_t* fai = fai_load(reference.c_str());
+    for (auto amplicon : GetExpAmplicons())
+    {
+        // get the forward and reverse primer seqs, int encode them and add them to the set
+        amplicon.GetForwardPrimer()->GetSeq(fai, _referenceID, seq);
+        artic::GetEncodedKmers(seq.c_str(), seq.size(), kSize, kmers);
+        seq.clear();
+        amplicon.GetReversePrimer()->GetSeq(fai, _referenceID, seq);
+        artic::GetEncodedKmers(seq.c_str(), seq.size(), kSize, kmers);
+        seq.clear();
+
+        // add each kmer to the map and link it to the amplicon
+        for (auto kmer : kmers)
+        {
+            auto it = kmerMap.find(kmer);
+            if (it == kmerMap.end())
+                kmerMap[kmer] = std::vector<unsigned int>();
+            kmerMap[kmer].emplace_back(amplicon.GetID());
+        }
+        kmers.clear();
+    }
+    if (fai)
+        fai_destroy(fai);
+    return;
 }
 
 // _loadScheme will load an input file and create the primer objects.
@@ -360,20 +400,25 @@ void artic::PrimerScheme::_validateScheme(void)
     {
 
         // add the forward primer start position to the holder
-        _fPrimerLocations.emplace_back(i->second->GetStart(), i->second->GetID());
+        _fPrimerLocations.emplace_back(i->second->GetStart(), i->second->GetName());
 
         // find the corresponding reverse primer and add the position to the holder
         schemeMap::iterator j = _rPrimers.find(i->second->GetBaseID() + RIGHT_PRIMER_TAG);
-        (j == _rPrimers.end()) ? throw std::runtime_error("can't find matching reverse primer for " + i->second->GetID()) : _rPrimerLocations.emplace_back(j->second->GetEnd(), j->second->GetID());
+        (j == _rPrimers.end()) ? throw std::runtime_error("can't find matching reverse primer for " + i->second->GetName()) : _rPrimerLocations.emplace_back(j->second->GetEnd(), j->second->GetName());
 
         // increment the amplicon counter and spans
         _numAmplicons++;
         spanCounter += (j->second->GetEnd() - i->second->GetStart());
 
         // create an amplicon and add it to the scheme holder
-        _expAmplicons.emplace_back(Amplicon(i->second, j->second));
+        _expAmplicons.emplace_back(Amplicon(i->second, j->second, _numAmplicons));
     }
     _meanAmpliconSpan = spanCounter / _numAmplicons;
+
+    // sort the expected amplicon list by reference position
+    std::sort(_expAmplicons.begin(), _expAmplicons.end(), [](auto& lhs, auto& rhs) {
+        return lhs.GetForwardPrimer()->GetEnd() < rhs.GetForwardPrimer()->GetEnd();
+    });
 
     // check all primers have been properly paired
     if (_numAmplicons != _fPrimers.size())
@@ -433,8 +478,8 @@ void artic::PrimerScheme::_validateScheme(void)
 }
 
 // Amplicon constructor.
-artic::Amplicon::Amplicon(Primer* p1, Primer* p2)
-    : _fPrimer(p1), _rPrimer(p2)
+artic::Amplicon::Amplicon(Primer* p1, Primer* p2, unsigned int id)
+    : _fPrimer(p1), _rPrimer(p2), _id(id)
 {
     // ensure p1 is forward and p2 is reverse
     if (_fPrimer->IsForward() == _rPrimer->IsForward())
@@ -457,8 +502,11 @@ artic::Amplicon::Amplicon(Primer* p1, Primer* p2)
 // IsProperlyPaired returns true if this primer is properly paired.
 bool artic::Amplicon::IsProperlyPaired(void) { return _isProperlyPaired; }
 
-// GetID returns the shared ID string of the primer pair.
-const std::string artic::Amplicon::GetID(void) const { return std::string(_fPrimer->GetID() + "_" + _rPrimer->GetID()); }
+// GetName returns the name for the amplicon (combines primer IDs).
+const std::string artic::Amplicon::GetName(void) const { return std::string(_fPrimer->GetName() + "_" + _rPrimer->GetName()); }
+
+// GetID returns the numberical ID for the amplicon.
+unsigned int artic::Amplicon::GetID(void) const { return _id; }
 
 // GetPrimerPoolID returns the pool ID for the primer pair (0 returned if primers not properly paired).
 std::size_t artic::Amplicon::GetPrimerPoolID(void)
@@ -485,6 +533,6 @@ const artic::Primer* artic::Amplicon::GetReversePrimer(void) { return _rPrimer; 
 // AddKmers adds the k-mers from a sequence to the amplicon.
 void artic::Amplicon::AddKmers(const char* seq, uint32_t seqLen, uint32_t kSize)
 {
-    artic::getEncodedKmers(seq, seqLen, kSize, _kmers);
+    artic::GetEncodedKmers(seq, seqLen, kSize, _kmers);
     return;
 }

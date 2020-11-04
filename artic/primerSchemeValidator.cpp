@@ -16,6 +16,8 @@ artic::PrimerScheme artic::ValidateScheme(SchemeArgs& args)
     // get primer sequences if requested
     if (args.primerSeqsFile.size() != 0)
     {
+        std::string fpSeq;
+        std::string rpSeq;
         LOG_TRACE("collecting primer sequences")
         if (args.refSeqFile.size() == 0)
             LOG_ERROR("no reference sequence provided, can't output primer sequences");
@@ -24,12 +26,14 @@ artic::PrimerScheme artic::ValidateScheme(SchemeArgs& args)
         fh.open(args.primerSeqsFile);
         for (auto amplicon : ps.GetExpAmplicons())
         {
-            auto f = (amplicon.GetForwardPrimer()->GetNumAlts()) ? amplicon.GetForwardPrimer()->GetID() + std::string("_alts_merged") : amplicon.GetForwardPrimer()->GetID();
-            auto r = (amplicon.GetReversePrimer()->GetNumAlts()) ? amplicon.GetReversePrimer()->GetID() + std::string("_alts_merged") : amplicon.GetReversePrimer()->GetID();
-            fh << ">" << f << std::endl;
-            fh << amplicon.GetForwardPrimer()->GetSeq(fai, ps.GetReferenceName()) << std::endl;
-            fh << ">" << r << std::endl;
-            fh << amplicon.GetReversePrimer()->GetSeq(fai, ps.GetReferenceName()) << std::endl;
+            auto fpName = (amplicon.GetForwardPrimer()->GetNumAlts()) ? amplicon.GetForwardPrimer()->GetName() + std::string("_alts_merged") : amplicon.GetForwardPrimer()->GetName();
+            auto rpName = (amplicon.GetReversePrimer()->GetNumAlts()) ? amplicon.GetReversePrimer()->GetName() + std::string("_alts_merged") : amplicon.GetReversePrimer()->GetName();
+            amplicon.GetForwardPrimer()->GetSeq(fai, ps.GetReferenceName(), fpSeq);
+            amplicon.GetReversePrimer()->GetSeq(fai, ps.GetReferenceName(), rpSeq);
+            fh << ">" << fpName << std::endl
+               << fpSeq << std::endl;
+            fh << ">" << rpName << std::endl
+               << rpSeq << std::endl;
         }
         fh.close();
         if (fai)
