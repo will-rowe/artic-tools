@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 
+#include <artic/amplitig.hpp>
 #include <artic/log.hpp>
 #include <artic/primerScheme.hpp>
 #include <artic/softmask.hpp>
@@ -42,9 +43,11 @@ int main(int argc, char** argv)
 
     // add softmask/amplitiger options and flags
     std::string inputFile;
+    std::vector<std::string> inputFiles;
     std::string outFileName;
     unsigned int minMAPQ = 15;
     unsigned int normalise = 100;
+    unsigned int kmerSize = 21;
     bool primerStart = false;
     bool removeBadPairs = false;
     bool noReadGroups = false;
@@ -60,9 +63,10 @@ int main(int argc, char** argv)
     softmaskCmd->add_flag("--verbose", verbose, "Output debugging information to STDERR");
 
     // add amplitig options and flags
-    amplitigCmd->add_option("-i,--fastqFile", inputFile, "The input FASTQ file (will try STDIN if not provided)");
+    amplitigCmd->add_option("-i,--fastqFiles", inputFiles, "The input FASTQ files");
     amplitigCmd->add_option("scheme", schemeArgs.schemeFile, "The ARTIC primer scheme")->required()->check(CLI::ExistingFile);
-    amplitigCmd->add_option("-r,--refSeq", schemeArgs.refSeqFile, "The reference sequence for the primer scheme (FASTA format)");
+    amplitigCmd->add_option("-r,--refSeq", schemeArgs.refSeqFile, "The reference sequence for the primer scheme (FASTA format)")->required();
+    amplitigCmd->add_option("-k,--kmerSize", kmerSize, "The k-mer size to use (default = 21)");
     amplitigCmd->add_flag("--verbose", verbose, "Output debugging information to STDERR");
 
     // add get options and flags
@@ -106,8 +110,8 @@ int main(int argc, char** argv)
         artic::Log::Init("get_amplitigs");
         LOG_TRACE("starting amplitigger");
         auto ps = artic::ValidateScheme(schemeArgs);
-        //auto amplitigger = artic::Softmasker(&ps, inputFile, userCmd.str());
-        //amplitigger.Run(verbose);
+        auto amplitigger = artic::Amplitigger(&ps, schemeArgs.refSeqFile, inputFiles, userCmd.str(), kmerSize);
+        amplitigger.Run(verbose);
     });
 
     // add the getter callback
@@ -149,7 +153,7 @@ int main(int argc, char** argv)
     }
     catch (const std::runtime_error& re)
     {
-        std::cerr << re.what() << std::endl;
+        std::cerr << "error--> " << re.what() << std::endl;
         return -1;
     }
     catch (...)

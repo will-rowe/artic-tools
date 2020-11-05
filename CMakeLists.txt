@@ -94,6 +94,9 @@ set(Boost_USE_MULTITHREADED ON)
 set(Boost_USE_STATIC_RUNTIME OFF) 
 find_package(Boost 1.45.0 COMPONENTS filesystem REQUIRED) 
 
+# zlib
+find_package(ZLIB REQUIRED)
+
 # cli11, spdlog
 add_subdirectory(extlibs/CLI11)
 add_subdirectory(extlibs/spdlog)

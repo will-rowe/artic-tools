@@ -54,6 +54,7 @@ TEST(primerscheme, validity)
     EXPECT_EQ(ps.GetNumAlts(), numAlts);
     EXPECT_EQ(ps.GetNumAmplicons(), numAmplicons);
     EXPECT_EQ(ps.GetPrimerPools().size(), numPools);
+    EXPECT_EQ(ps.GetMinPrimerLen(), 22);
 }
 
 // primer access

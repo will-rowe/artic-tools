@@ -134,6 +134,9 @@ const std::string& artic::PrimerScheme::GetReferenceName(void) const { return _r
 // GetNumPrimers returns the number of primers in the primer scheme.
 unsigned int artic::PrimerScheme::GetNumPrimers(void) { return _numPrimers; }
 
+// GetMinPrimerLen returns the minimum primer length in the scheme.
+unsigned int artic::PrimerScheme::GetMinPrimerLen(void) { return _minPrimerLen; }
+
 // GetNumAlts returns the number of alts in the primer scheme.
 unsigned int artic::PrimerScheme::GetNumAlts(void) { return _numAlts; }
 
@@ -249,6 +252,8 @@ void artic::PrimerScheme::GetPrimerKmers(const std::string& reference, uint32_t 
 {
     if (reference.size() == 0)
         throw std::runtime_error("no reference sequence provided, can't output primer sequences");
+    if (kSize > _minPrimerLen)
+        throw std::runtime_error("requested k-mer size is greater than the shortest primer in the scheme (" + std::to_string(_minPrimerLen) + ")");
     std::string seq;
     artic::kmerset_t kmers;
     faidx_t* fai = fai_load(reference.c_str());
@@ -396,6 +401,7 @@ void artic::PrimerScheme::_validateScheme(void)
 
     // cycle through the map holding the forward primers
     int64_t spanCounter = 0;
+    _minPrimerLen = _refEnd - _refStart;
     for (schemeMap::iterator i = _fPrimers.begin(); i != _fPrimers.end(); ++i)
     {
 
@@ -412,6 +418,12 @@ void artic::PrimerScheme::_validateScheme(void)
 
         // create an amplicon and add it to the scheme holder
         _expAmplicons.emplace_back(Amplicon(i->second, j->second, _numAmplicons));
+
+        // update the min and max primer sizes for the scheme
+        if (i->second->GetLen() < _minPrimerLen)
+            _minPrimerLen = i->second->GetLen();
+        if (j->second->GetLen() < _minPrimerLen)
+            _minPrimerLen = j->second->GetLen();
     }
     _meanAmpliconSpan = spanCounter / _numAmplicons;
 
