@@ -145,6 +145,14 @@ TEST(primerscheme, primerseq)
     EXPECT_STREQ("ACCAACCAACTTTCGATCTCTTGT", seq.c_str());
 }
 
+// expected amplicons
+TEST(primerscheme, amplicons)
+{
+    auto ps = artic::PrimerScheme(inputScheme);
+    auto amplicons = ps.GetExpAmplicons();
+    EXPECT_EQ(amplicons.size(), ps.GetNumAmplicons());
+}
+
 // primer kmers
 TEST(primerscheme, kmers)
 {

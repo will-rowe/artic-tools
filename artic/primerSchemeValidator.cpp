@@ -64,6 +64,8 @@ artic::PrimerScheme artic::ValidateScheme(SchemeArgs& args)
     LOG_TRACE("\treference sequence:\t{}", ps.GetReferenceName());
     LOG_TRACE("\tnumber of pools:\t{}", ps.GetPrimerPools().size());
     LOG_TRACE("\tnumber of primers:\t{} (includes {} alts)", ps.GetNumPrimers(), ps.GetNumAlts());
+    LOG_TRACE("\tminimum primer size:\t{}", ps.GetMinPrimerLen());
+    LOG_TRACE("\tmaximum primer size:\t{}", ps.GetMaxPrimerLen());
     LOG_TRACE("\tnumber of amplicons:\t{}", ps.GetNumAmplicons());
     LOG_TRACE("\tmean amplicon size:\t{}", ps.GetMeanAmpliconSpan());
     LOG_TRACE("\tscheme ref. span:\t{}-{}", ps.GetRefStart(), ps.GetRefEnd());

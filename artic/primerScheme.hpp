@@ -111,6 +111,9 @@ namespace artic
         // GetMinPrimerLen returns the minimum primer length in the scheme.
         unsigned int GetMinPrimerLen(void);
 
+        // GetMaxPrimerLen returns the maximum primer length in the scheme.
+        unsigned int GetMaxPrimerLen(void);
+
         // GetNumAlts returns the number of alts in the primer scheme.
         unsigned int GetNumAlts(void);
 
@@ -157,16 +160,16 @@ namespace artic
         void GetPrimerKmers(const std::string& reference, uint32_t kSize, std::unordered_map<artic::kmer_t, std::vector<unsigned int>>& kmerMap);
 
     private:
-        void _loadScheme(const std::string& filename); // _loadScheme will load an input file and create the primer objects.
-        void _validateScheme(void);                    // _validateScheme will check all forward primers have a paired reverse primer and record some primer scheme stats.
-        std::string _filename;                         // the file that the scheme was loaded from
-        std::string _referenceID;                      // the ID of the reference sequence covered by the primer scheme
-        unsigned int _numPrimers;                      // the total number of primers in the scheme
-        unsigned int _numAlts;                         // the number of alts that were merged when the scheme was read
-        unsigned int _numAmplicons;                    // the number of amplicons in the scheme
-        unsigned int _meanAmpliconSpan;                // the mean amplicon span
-        unsigned int _minPrimerLen;                    // the minimum primer length in the scheme
-        //unsigned int _maxPrimerLen;                                     // the maximum primer length in the scheme
+        void _loadScheme(const std::string& filename);                  // _loadScheme will load an input file and create the primer objects.
+        void _validateScheme(void);                                     // _validateScheme will check all forward primers have a paired reverse primer and record some primer scheme stats.
+        std::string _filename;                                          // the file that the scheme was loaded from
+        std::string _referenceID;                                       // the ID of the reference sequence covered by the primer scheme
+        unsigned int _numPrimers;                                       // the total number of primers in the scheme
+        unsigned int _numAlts;                                          // the number of alts that were merged when the scheme was read
+        unsigned int _numAmplicons;                                     // the number of amplicons in the scheme
+        unsigned int _meanAmpliconSpan;                                 // the mean amplicon span
+        unsigned int _minPrimerLen;                                     // the minimum primer length in the scheme
+        unsigned int _maxPrimerLen;                                     // the maximum primer length in the scheme
         int64_t _refStart;                                              // the first position in the reference covered by the primer scheme
         int64_t _refEnd;                                                // the last position in the reference covered by the primer scheme
         std::vector<std::string> _primerPools;                          // the primer pool IDs found in the primer scheme
