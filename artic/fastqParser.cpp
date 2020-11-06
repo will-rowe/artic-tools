@@ -5,7 +5,7 @@
 #include "fastqParser.hpp"
 
 //
-FastqFile::FastqFile(const std::vector<std::string> files)
+artic::FastqReader::FastqReader(const std::vector<std::string> files)
     : _files(files), _fileNumber(0), _kseq(NULL)
 {
     _fileItr = files.begin();
@@ -14,13 +14,13 @@ FastqFile::FastqFile(const std::vector<std::string> files)
 }
 
 //
-FastqFile::~FastqFile()
+artic::FastqReader::~FastqReader()
 {
     Close();
 }
 
 //
-void FastqFile::Close()
+void artic::FastqReader::Close()
 {
     if (_kseq != NULL)
     {
@@ -33,7 +33,7 @@ void FastqFile::Close()
 }
 
 //
-void FastqFile::Reopen()
+void artic::FastqReader::Reopen()
 {
     Close();
     _fileItr = _files.begin();
@@ -42,7 +42,7 @@ void FastqFile::Reopen()
 }
 
 // returns >=0 (length of seq), -1 end of last file, -2 truncated quality string
-int FastqFile::GetRecord(std::string& seq, size_t& id)
+int artic::FastqReader::GetRecord(std::string& seq, size_t& id)
 {
     const int r = kseq_read(_kseq);
 
@@ -66,7 +66,7 @@ int FastqFile::GetRecord(std::string& seq, size_t& id)
 }
 
 //
-std::vector<std::string>::const_iterator FastqFile::openNextFile()
+std::vector<std::string>::const_iterator artic::FastqReader::openNextFile()
 {
     if (_fileItr != _files.end())
     {

@@ -110,7 +110,7 @@ int main(int argc, char** argv)
         artic::Log::Init("get_amplitigs");
         LOG_TRACE("starting amplitigger");
         auto ps = artic::ValidateScheme(schemeArgs);
-        auto amplitigger = artic::Amplitigger(&ps, schemeArgs.refSeqFile, inputFiles, userCmd.str(), kmerSize);
+        auto amplitigger = artic::Amplitigger(&ps, schemeArgs.refSeqFile, inputFiles, kmerSize);
         amplitigger.Run(verbose);
     });
 

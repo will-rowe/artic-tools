@@ -4,7 +4,7 @@
 #include "log.hpp"
 
 // Amplitigger constructor.
-artic::Amplitigger::Amplitigger(artic::PrimerScheme* primerScheme, const std::string& refFile, const std::vector<std::string> inputFiles, const std::string& userCmd, unsigned int kmerSize)
+artic::Amplitigger::Amplitigger(artic::PrimerScheme* primerScheme, const std::string& refFile, const std::vector<std::string> inputFiles, unsigned int kmerSize)
     : _primerScheme(primerScheme), _refFile(refFile), _inputFiles(inputFiles), _kmerSize(kmerSize)
 {
 
@@ -39,15 +39,24 @@ void artic::Amplitigger::Run(bool verbose)
     // get the FASTQ parser ready
     size_t fileNum = 0;
     std::string seq;
-    FastqFile fastqReader(_inputFiles);
+    artic::FastqReader fastqReader(_inputFiles);
+
+    // get a k-mer holder
+    artic::kmerset_t kmers;
 
     // get the read k-mers
-    LOG_INFO("collecting read k-mers");
+    LOG_TRACE("collecting read k-mers");
     while (fastqReader.GetRecord(seq, fileNum) >= 0)
     {
-        LOG_INFO(seq);
+        _recordCounter++;
+        artic::GetEncodedKmers(seq.c_str(), seq.size(), _kmerSize, kmers);
+        LOG_TRACE("\tgot {} kmers", kmers.size());
+        kmers.clear();
     }
     fastqReader.Close();
+
+    // print some stats
+    LOG_TRACE("\tread processed:\t{}", _recordCounter);
 }
 
 /*

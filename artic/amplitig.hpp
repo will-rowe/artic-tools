@@ -17,7 +17,7 @@ namespace artic
     {
     public:
         // Amplitigger constructor and destructor.
-        Amplitigger(artic::PrimerScheme* primerScheme, const std::string& refFile, const std::vector<std::string> inputFiles, const std::string& userCmd, unsigned int kmerSize);
+        Amplitigger(artic::PrimerScheme* primerScheme, const std::string& refFile, const std::vector<std::string> inputFiles, unsigned int kmerSize);
         //~Amplitigger(void);
 
         // Run will perform the softmasking on the open BAM file.
