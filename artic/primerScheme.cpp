@@ -149,6 +149,9 @@ unsigned int artic::PrimerScheme::GetNumAmplicons(void) { return _numAmplicons; 
 // GetMeanAmpliconSpan returns the mean amplicon span (including primer sequence).
 unsigned int artic::PrimerScheme::GetMeanAmpliconSpan(void) { return _meanAmpliconSpan; }
 
+// GetMaxAmpliconSpan returns the max amplicon span (including primer sequence).
+unsigned int artic::PrimerScheme::GetMaxAmpliconSpan(void) { return _maxAmpliconSpan; }
+
 // GetPrimerPools returns the primer pools found in the primer scheme.
 std::vector<std::string> artic::PrimerScheme::GetPrimerPools(void) { return std::vector<std::string>(_primerPools.begin() + 1, _primerPools.end()); }
 
@@ -403,7 +406,7 @@ void artic::PrimerScheme::_validateScheme(void)
     _numAmplicons = 0;
 
     // cycle through the map holding the forward primers
-    int64_t spanCounter = 0;
+    uint64_t spanCounter = 0;
     _minPrimerLen = 999;
     _maxPrimerLen = 0;
     for (schemeMap::iterator i = _fPrimers.begin(); i != _fPrimers.end(); ++i)
@@ -432,6 +435,9 @@ void artic::PrimerScheme::_validateScheme(void)
             _minPrimerLen = j->second->GetLen();
         if (j->second->GetLen() > _maxPrimerLen)
             _maxPrimerLen = j->second->GetLen();
+        auto span = _expAmplicons.back().GetMaxSpan();
+        if ((span.second - span.first) > _maxAmpliconSpan)
+            _maxAmpliconSpan = (span.second - span.first);
     }
     _meanAmpliconSpan = spanCounter / _numAmplicons;
 

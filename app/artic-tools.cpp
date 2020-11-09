@@ -67,7 +67,6 @@ int main(int argc, char** argv)
     amplitigCmd->add_option("scheme", schemeArgs.schemeFile, "The ARTIC primer scheme")->required()->check(CLI::ExistingFile);
     amplitigCmd->add_option("-r,--refSeq", schemeArgs.refSeqFile, "The reference sequence for the primer scheme (FASTA format)")->required();
     amplitigCmd->add_option("-k,--kmerSize", kmerSize, "The k-mer size to use (default = 21)");
-    amplitigCmd->add_flag("--verbose", verbose, "Output debugging information to STDERR");
 
     // add get options and flags
     getterCmd->add_option("scheme", schemeArgs.schemeName, "The name of the scheme to download (ebola|nipah|scov2)")->required();
@@ -76,7 +75,6 @@ int main(int argc, char** argv)
 
     // add validator options and flags
     validatorCmd->add_option("scheme", schemeArgs.schemeFile, "The primer scheme to validate")->required()->check(CLI::ExistingFile);
-    validatorCmd->add_option("--schemeVersion", schemeArgs.schemeVersion, "The ARTIC primer scheme version (default = latest)");
     validatorCmd->add_option("-o,--outputPrimerSeqs", schemeArgs.primerSeqsFile, "If provided, will write primer sequences as multiFASTA (requires --refSeq to be provided)");
     validatorCmd->add_option("-r,--refSeq", schemeArgs.refSeqFile, "The reference sequence for the primer scheme (FASTA format)");
     validatorCmd->add_option("--outputInserts", schemeArgs.insertsFile, "If provided, will write primer scheme inserts as BED (exluding primer sequences)");
@@ -111,7 +109,7 @@ int main(int argc, char** argv)
         LOG_TRACE("starting amplitigger");
         auto ps = artic::ValidateScheme(schemeArgs);
         auto amplitigger = artic::Amplitigger(&ps, schemeArgs.refSeqFile, inputFiles, kmerSize);
-        amplitigger.Run(verbose);
+        amplitigger.Run();
     });
 
     // add the getter callback

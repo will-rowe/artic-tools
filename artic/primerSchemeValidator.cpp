@@ -68,6 +68,7 @@ artic::PrimerScheme artic::ValidateScheme(SchemeArgs& args)
     LOG_TRACE("\tmaximum primer size:\t{}", ps.GetMaxPrimerLen());
     LOG_TRACE("\tnumber of amplicons:\t{}", ps.GetNumAmplicons());
     LOG_TRACE("\tmean amplicon size:\t{}", ps.GetMeanAmpliconSpan());
+    LOG_TRACE("\tmaximum amplicon size:\t{}", ps.GetMaxAmpliconSpan());
     LOG_TRACE("\tscheme ref. span:\t{}-{}", ps.GetRefStart(), ps.GetRefEnd());
     float proportion = (float)ps.GetNumOverlaps() / (float)(ps.GetRefEnd() - ps.GetRefStart());
     LOG_TRACE("\tscheme overlaps:\t{}%", proportion * 100);

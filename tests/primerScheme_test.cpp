@@ -10,10 +10,11 @@ const unsigned int numPools = 2;
 const unsigned int numPrimers = 218;
 const unsigned int numAlts = 22;
 const unsigned int numAmplicons = 98;
-const unsigned int kSize = 11;
+//const unsigned int kSize = 11;
 const std::string pool1 = "nCoV-2019_1";
 const std::string pool2 = "nCoV-2019_2";
 const std::string reference = std::string(TEST_DATA_PATH) + "SCoV2.reference.fasta";
+const std::string refID = "MN908947.3";
 const std::string inputScheme = std::string(TEST_DATA_PATH) + "SCoV2.scheme.v3.bed";
 
 // scheme constructor
@@ -50,15 +51,19 @@ TEST(primerscheme, constructor)
 TEST(primerscheme, validity)
 {
     auto ps = artic::PrimerScheme(inputScheme);
+    EXPECT_EQ(ps.GetFileName(), inputScheme);
+    EXPECT_EQ(ps.GetReferenceName(), refID);
+    EXPECT_EQ(ps.GetPrimerPools().size(), numPools);
     EXPECT_EQ(ps.GetNumPrimers(), numPrimers);
     EXPECT_EQ(ps.GetNumAlts(), numAlts);
-    EXPECT_EQ(ps.GetNumAmplicons(), numAmplicons);
-    EXPECT_EQ(ps.GetPrimerPools().size(), numPools);
     EXPECT_EQ(ps.GetMinPrimerLen(), 22);
+    EXPECT_EQ(ps.GetMaxPrimerLen(), 57);
+    EXPECT_EQ(ps.GetNumAmplicons(), numAmplicons);
+    EXPECT_EQ(ps.GetMeanAmpliconSpan(), 393);
 }
 
 // primer access
-TEST(primerscheme, access)
+TEST(primerscheme, schemeAccess)
 {
     auto ps = artic::PrimerScheme(inputScheme);
 
@@ -104,7 +109,7 @@ TEST(primerscheme, access)
 }
 
 // primer sites
-TEST(primerscheme, primersites)
+TEST(primerscheme, primerSites)
 {
     auto ps = artic::PrimerScheme(inputScheme);
     bool primerSite;
@@ -131,7 +136,7 @@ TEST(primerscheme, primersites)
 }
 
 // primer sequence
-TEST(primerscheme, primerseq)
+TEST(primerscheme, primerSeq)
 {
     auto ps = artic::PrimerScheme(inputScheme);
     auto pp = ps.FindPrimers(40, 400);
@@ -154,6 +159,7 @@ TEST(primerscheme, amplicons)
 }
 
 // primer kmers
+/*
 TEST(primerscheme, kmers)
 {
     auto ps = artic::PrimerScheme(inputScheme);
@@ -170,3 +176,4 @@ TEST(primerscheme, kmers)
         }
     }
 }
+*/

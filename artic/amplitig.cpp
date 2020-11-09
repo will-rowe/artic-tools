@@ -16,9 +16,15 @@ artic::Amplitigger::Amplitigger(artic::PrimerScheme* primerScheme, const std::st
     if (_inputFiles.size() == 0)
         throw std::runtime_error("no FASTQ files provided");
 
+    // get thresholds
+    _minPrimerKmers = 0.9;
+    _minReadLength = 100;
+    _maxReadLength = _primerScheme->GetMaxAmpliconSpan() + (0.10 * _primerScheme->GetMaxAmpliconSpan());
+
     // get the holders ready
-    _recordCounter = 0;
-    _filterDroppedCounter = 0;
+    _readCounter = 0;
+    _droppedLong = 0;
+    _droppedShort = 0;
 
     // get the containers for the expected amplicons
     //for (auto amplicon : _primerScheme->GetExpAmplicons())
@@ -33,7 +39,7 @@ artic::Amplitigger::Amplitigger(artic::PrimerScheme* primerScheme, const std::st
 }
 
 // Run will perform the amplicon read binning on the open FASTQ file.
-void artic::Amplitigger::Run(bool verbose)
+void artic::Amplitigger::Run()
 {
 
     // get the FASTQ parser ready
@@ -44,19 +50,37 @@ void artic::Amplitigger::Run(bool verbose)
     // get a k-mer holder
     artic::kmerset_t kmers;
 
-    // get the read k-mers
+    // process the reads
     LOG_TRACE("collecting read k-mers");
-    while (fastqReader.GetRecord(seq, fileNum) >= 0)
+    for (int seqLen; (seqLen = fastqReader.GetRecord(seq, fileNum)) >= 0;)
     {
-        _recordCounter++;
-        artic::GetEncodedKmers(seq.c_str(), seq.size(), _kmerSize, kmers);
-        LOG_TRACE("\tgot {} kmers", kmers.size());
+
+        // check read length
+        _readCounter++;
+        if (seqLen < _minReadLength)
+        {
+            _droppedShort++;
+            continue;
+        }
+        if (seqLen > _maxReadLength)
+        {
+            _droppedLong++;
+            continue;
+        }
+
+        // get the read k-mers
+        artic::GetEncodedKmers(seq.c_str(), seqLen, _kmerSize, kmers);
+        //LOG_TRACE("\tgot {} kmers", kmers.size());
         kmers.clear();
     }
     fastqReader.Close();
 
     // print some stats
-    LOG_TRACE("\tread processed:\t{}", _recordCounter);
+    LOG_TRACE("finished processing reads")
+    LOG_TRACE("\ttotal input reads:\t{}", _readCounter);
+    LOG_TRACE("\ttotal dropped reads:\t{}", _droppedLong + _droppedShort);
+    LOG_TRACE("\t- short reads (<{}):\t{}", _minReadLength, _droppedShort);
+    LOG_TRACE("\t- long reads (>{}):\t{}", _maxReadLength, _droppedLong);
 }
 
 /*

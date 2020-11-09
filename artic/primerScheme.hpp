@@ -123,6 +123,9 @@ namespace artic
         // GetMeanAmpliconSpan returns the mean amplicon span (including primer sequence).
         unsigned int GetMeanAmpliconSpan(void);
 
+        // GetMaxAmpliconSpan returns the max amplicon span (including primer sequence).
+        unsigned int GetMaxAmpliconSpan(void);
+
         // GetPrimerPools returns all the primer pools found in the primer scheme.
         std::vector<std::string> GetPrimerPools(void);
 
@@ -167,7 +170,8 @@ namespace artic
         unsigned int _numPrimers;                                       // the total number of primers in the scheme
         unsigned int _numAlts;                                          // the number of alts that were merged when the scheme was read
         unsigned int _numAmplicons;                                     // the number of amplicons in the scheme
-        unsigned int _meanAmpliconSpan;                                 // the mean amplicon span
+        unsigned int _meanAmpliconSpan;                                 // the mean amplicon span (incl. primers)
+        unsigned int _maxAmpliconSpan;                                  // the max amplicon span (incl. primers)
         unsigned int _minPrimerLen;                                     // the minimum primer length in the scheme
         unsigned int _maxPrimerLen;                                     // the maximum primer length in the scheme
         int64_t _refStart;                                              // the first position in the reference covered by the primer scheme

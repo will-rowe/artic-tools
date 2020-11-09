@@ -20,8 +20,8 @@ namespace artic
         Amplitigger(artic::PrimerScheme* primerScheme, const std::string& refFile, const std::vector<std::string> inputFiles, unsigned int kmerSize);
         //~Amplitigger(void);
 
-        // Run will perform the softmasking on the open BAM file.
-        void Run(bool verbose);
+        // Run will perform the amplitigging.
+        void Run();
 
     private:
         // data holders
@@ -34,12 +34,16 @@ namespace artic
         mutable std::shared_mutex _mutex;
 
         // user parameters
-        unsigned int _kmerSize;       // the k-mer size to use
-        unsigned int _minPrimerKmers; // the minimum proportion of matching primer k-mers required for amplicon assignment
+        // TODO: implement these as options
+        unsigned int _kmerSize; // the k-mer size to use
+        float _minPrimerKmers;  // the minimum proportion of matching primer k-mers required for amplicon assignment
+        int _minReadLength;     // drop reads shorter than this length
+        int _maxReadLength;     // drop reads longer than this length (default is to use max amplicon span in the scheme + 10%)
 
         // counters
-        unsigned int _recordCounter;        // number of records processed by the softmasker
-        unsigned int _filterDroppedCounter; // number of records which failed filters
+        unsigned int _readCounter;  // number of reads processed by the softmasker
+        unsigned int _droppedLong;  // number of reads which were deemed too long
+        unsigned int _droppedShort; // number of reads which were demmed too short
     };
 
 } // namespace artic
