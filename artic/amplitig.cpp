@@ -1,3 +1,7 @@
+#include <algorithm>
+#include <iostream>
+#include <utility>
+
 #include "amplitig.hpp"
 #include "fastqParser.hpp"
 #include "kmers.hpp"
@@ -44,15 +48,18 @@ void artic::Amplitigger::Run()
 
     // get the FASTQ parser ready
     size_t fileNum = 0;
-    std::string seq;
     artic::FastqReader fastqReader(_inputFiles);
 
-    // get a k-mer holder
+    // TODO: print where files are being collected from
+
+    // get some holders ready
+    std::string seq;
     artic::kmerset_t kmers;
+    std::vector<unsigned int> ampliconIDs;
 
     // process the reads
     LOG_TRACE("collecting read k-mers");
-    for (int seqLen; (seqLen = fastqReader.GetRecord(seq, fileNum)) >= 0;)
+    for (int seqLen; (seqLen = fastqReader.GetRecord(seq, fileNum)) > 0;)
     {
 
         // check read length
@@ -70,10 +77,86 @@ void artic::Amplitigger::Run()
 
         // get the read k-mers
         artic::GetEncodedKmers(seq.c_str(), seqLen, _kmerSize, kmers);
-        //LOG_TRACE("\tgot {} kmers", kmers.size());
+
+        // assign read to amplicon
+        for (auto kmer : kmers)
+        {
+
+            // check if read k-mer is matched to a primer k-mer
+            auto it = _primerKmerMap.find(kmer);
+            if (it != _primerKmerMap.end())
+            {
+                ampliconIDs.reserve(ampliconIDs.size() + it->second.size());
+                ampliconIDs.insert(ampliconIDs.end(), it->second.begin(), it->second.end());
+            }
+        }
+        sort(ampliconIDs.begin(), ampliconIDs.end());
+
+        std::vector<std::pair<unsigned int, int>> ampliconCandidates;
+        int chain = 0;
+        for (size_t i = 1; i < ampliconIDs.size(); i++)
+        {
+            // if successive match, keep building the chain
+            if (ampliconIDs.at(i - 1) == ampliconIDs.at(i))
+            {
+                chain++;
+                continue;
+            }
+
+            // ignore empty chains
+            if (chain == 0)
+                continue;
+
+            // if first chain, add it to candidates and continue
+            if (ampliconCandidates.empty())
+            {
+                ampliconCandidates.emplace_back(std::make_pair(ampliconIDs.at(i - 1), chain));
+                chain = 0;
+                continue;
+            }
+
+            // if new chain is < than existing max, continue
+            if (chain < ampliconCandidates.back().second)
+            {
+                chain = 0;
+                continue;
+            }
+
+            // if new chain > existing max, replace and continue
+            if (chain > ampliconCandidates.back().second)
+            {
+                ampliconCandidates.pop_back();
+                ampliconCandidates.emplace_back(std::make_pair(ampliconIDs.at(i - 1), chain));
+                chain = 0;
+                continue;
+            }
+
+            // final opt, same value as existing max so add it as well
+            ampliconCandidates.emplace_back(std::make_pair(ampliconIDs.at(i - 1), chain));
+            chain = 0;
+        }
+
+        // process the likely amplicons
+        switch (ampliconCandidates.size())
+        {
+            case 0:
+                //LOG_ERROR("no amplicon found....");
+                break;
+            case 1:
+                //LOG_TRACE("amplicon id= {} ({} kmers)", _primerScheme->GetAmpliconName(ampliconCandidates.front().first), ampliconCandidates.front().second);
+
+                // compare biggest chain to max %k-mer content
+                // remove chains with multiple identities
+                break;
+            default:
+                //LOG_ERROR("too many amplicons found - {} amplicons with {} k-mers", ampliconCandidates.size(), ampliconCandidates.front().second);
+                break;
+        }
+
+        // clear the holders ready for the next read
         kmers.clear();
+        ampliconIDs.clear();
     }
-    fastqReader.Close();
 
     // print some stats
     LOG_TRACE("finished processing reads")

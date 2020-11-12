@@ -18,12 +18,11 @@ namespace artic
     public:
         FastqReader(const std::vector<std::string> fnames);
         ~FastqReader();
-        void Close();
-        void Reopen();
         int GetRecord(std::string& seq, size_t& id);
 
     private:
-        std::vector<std::string>::const_iterator openNextFile();
+        bool openNextFile();
+        void closeFile();
         std::vector<std::string> _files;                   // the FASTQ filenames to read
         std::vector<std::string>::const_iterator _fileItr; // an iterator for the filenames
         unsigned int _fileNumber;                          // the number of files read

@@ -47,7 +47,7 @@ int main(int argc, char** argv)
     std::string outFileName;
     unsigned int minMAPQ = 15;
     unsigned int normalise = 100;
-    unsigned int kmerSize = 21;
+    unsigned int kmerSize = 11;
     bool primerStart = false;
     bool removeBadPairs = false;
     bool noReadGroups = false;
@@ -66,7 +66,7 @@ int main(int argc, char** argv)
     amplitigCmd->add_option("-i,--fastqFiles", inputFiles, "The input FASTQ files");
     amplitigCmd->add_option("scheme", schemeArgs.schemeFile, "The ARTIC primer scheme")->required()->check(CLI::ExistingFile);
     amplitigCmd->add_option("-r,--refSeq", schemeArgs.refSeqFile, "The reference sequence for the primer scheme (FASTA format)")->required();
-    amplitigCmd->add_option("-k,--kmerSize", kmerSize, "The k-mer size to use (default = 21)");
+    amplitigCmd->add_option("-k,--kmerSize", kmerSize, "The k-mer size to use (default = 11)");
 
     // add get options and flags
     getterCmd->add_option("scheme", schemeArgs.schemeName, "The name of the scheme to download (ebola|nipah|scov2)")->required();

@@ -25,10 +25,10 @@ namespace artic
 
     private:
         // data holders
-        artic::PrimerScheme* _primerScheme;                                          // the loaded primer scheme
-        const std::string _refFile;                                                  // the reference fasta file
-        const std::vector<std::string> _inputFiles;                                  // input FASTQ files
-        std::unordered_map<artic::kmer_t, std::vector<unsigned int>> _primerKmerMap; // map of primer k-mers and their origins
+        artic::PrimerScheme* _primerScheme;         // the loaded primer scheme
+        const std::string _refFile;                 // the reference fasta file
+        const std::vector<std::string> _inputFiles; // input FASTQ files
+        kmermap_t _primerKmerMap;                   // map of primer k-mers and their origins
         // std::unordered_map<std::string, artic::Amplicon> _amplicons; // map of amplicons
 
         mutable std::shared_mutex _mutex;

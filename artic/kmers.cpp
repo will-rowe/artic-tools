@@ -11,28 +11,30 @@ namespace artic
     {
         if (kSize > MAX_K_SIZE)
             throw std::runtime_error("k-mer size must be <= " + std::to_string(MAX_K_SIZE));
-        uint64_t kmerMask = (0x1 << 2 * kSize) - 1;
+        //if (!kmers.empty())
+        //    throw std::runtime_error("provided k-mer container already has k-mers in it");
+        kmers.reserve(kmers.size() + (seqLen - kSize + 1));
+        uint64_t kmerMask = (1ULL << (2 * kSize)) - 1;
         uint64_t bitShift = 2 * (kSize - 1);
-        kmer_t fk, rk = 0;
+        kmer_t x[2];
         uint32_t l = 0;
         for (uint32_t i = 0; i < seqLen; i++)
         {
 
             // get 2-bit encoding of current base
-            uint8_t base = nt2char[static_cast<unsigned char>(seq[i])];
+            uint8_t base = (uint8_t)seq[i] < 128 ? nt2char[static_cast<uint8_t>(seq[i])] : 4;
 
             // skip non A/C/T/G bases
             if (base > 3)
                 continue;
 
             // use the masks to add the current base to the k-mer and its reverse complement, dropping the oldest base from the k-mer
-            fk = (fk << 2 | base) & kmerMask;
-            rk = (rk >> 2) | (0x3 ^ base) << bitShift;
+            x[0] = (x[0] << 2 | base) & kmerMask;
+            x[1] = x[1] >> 2 | (uint64_t)(3ULL - base) << bitShift;
 
             // once enough bases have been processed, start collecting canonical k-mers
-            l++;
-            if (l >= kSize)
-                (fk <= rk) ? kmers.push_back(fk) : kmers.push_back(rk);
+            if (++l >= kSize)
+                (x[0] <= x[1]) ? kmers.emplace_back(x[0]) : kmers.emplace_back(x[1]);
         }
         return;
     }
@@ -43,22 +45,10 @@ namespace artic
         kmer_t rc = 0;
         for (uint32_t i = 0; i < kSize; i++)
         {
-            rc = (rc << 2) | ((encodedKmer & 0x3) ^ 0x3);
+            rc = (rc << 2) | ((encodedKmer & 3ULL) ^ 3ULL);
             encodedKmer >>= 2;
         }
         return rc;
-    }
-
-    // GetNextKmers will return the 4 possible next k-mers (based on actg alphabet).
-    void GetNextKmers(kmer_t encodedKmer, uint32_t kSize, kmer_t& nextA, kmer_t& nextB, kmer_t& nextC, kmer_t& nextD)
-    {
-        uint64_t kmerMask = (0x1 << 2 * kSize) - 1;
-        encodedKmer = (encodedKmer << 2) & kmerMask;
-        nextA = encodedKmer;
-        nextB = encodedKmer + 1;
-        nextC = encodedKmer + 2;
-        nextD = encodedKmer + 3;
-        return;
     }
 
     // DecodeKmer will decode an integer encoded k-mer.
@@ -69,7 +59,7 @@ namespace artic
         for (uint32_t i = 0; i < kSize; i++)
         {
             // add a mask to grab 2 bits at time
-            uint8_t base = encodedKmer & 0x3;
+            uint8_t base = encodedKmer & 3ULL;
             decodedKmer[(kSize - 1) - i] = char2nt[base];
             encodedKmer >>= 2;
         }

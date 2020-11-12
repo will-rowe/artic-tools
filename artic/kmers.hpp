@@ -44,9 +44,6 @@ namespace artic
     // GetRCencoding will reverse complement an encoded k-mer.
     kmer_t GetRCencoding(kmer_t encodedKmer, uint32_t kSize);
 
-    // GetNextKmers will return the 4 possible next k-mers (based on actg alphabet).
-    void GetNextKmers(kmer_t encodedKmer, uint32_t kSize, kmer_t& nextA, kmer_t& nextB, kmer_t& nextC, kmer_t& nextD);
-
     // DecodeKmer will decode an integer encoded k-mer.
     void DecodeKmer(kmer_t encodedKmer, uint32_t kSize, std::string& decodedKmer);
 

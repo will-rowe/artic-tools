@@ -113,12 +113,12 @@ artic::PrimerScheme::PrimerScheme(const std::string& inputFile)
 artic::PrimerScheme::~PrimerScheme(void)
 {
     // properly destory the primer scheme (maps of pointers)
-    for (schemeMap::iterator i = _fPrimers.begin(); i != _fPrimers.end(); ++i)
+    for (primermap_t::iterator i = _fPrimers.begin(); i != _fPrimers.end(); ++i)
     {
         delete (i->second);
         i->second = nullptr;
     }
-    for (schemeMap::iterator j = _rPrimers.begin(); j != _rPrimers.end(); ++j)
+    for (primermap_t::iterator j = _rPrimers.begin(); j != _rPrimers.end(); ++j)
     {
         delete (j->second);
         j->second = nullptr;
@@ -227,13 +227,13 @@ artic::Amplicon artic::PrimerScheme::FindPrimers(int64_t segStart, int64_t segEn
     }
 
     // lookup the primers in the scheme
-    schemeMap::iterator i = _fPrimers.find(fPrimerID);
-    schemeMap::iterator j = _rPrimers.find(rPrimerID);
+    primermap_t::iterator i = _fPrimers.find(fPrimerID);
+    primermap_t::iterator j = _rPrimers.find(rPrimerID);
     if ((i == _fPrimers.end()) || (j == _rPrimers.end()))
         throw std::runtime_error("primer dropped from scheme - " + fPrimerID + " & " + rPrimerID);
 
     // return an amplicon with no ID (0) as this is not guarenteed to be an expected scheme amplicon
-    return Amplicon(i->second, j->second, 0);
+    return Amplicon(i->second, j->second);
 }
 
 // CheckAmpliconOverlap returns true if the queried position is covered by multiple primers.
@@ -254,7 +254,7 @@ bool artic::PrimerScheme::CheckPrimerSite(int64_t pos, const std::string& poolNa
 }
 
 // GetPrimerKmers will int encode k-mers from all primers in the scheme and deposit them in the provided map, linked to their amplicon primer origin(s).
-void artic::PrimerScheme::GetPrimerKmers(const std::string& reference, uint32_t kSize, std::unordered_map<artic::kmer_t, std::vector<unsigned int>>& kmerMap)
+void artic::PrimerScheme::GetPrimerKmers(const std::string& reference, uint32_t kSize, artic::kmermap_t& kmerMap)
 {
     if (reference.size() == 0)
         throw std::runtime_error("no reference sequence provided, can't output primer sequences");
@@ -278,7 +278,7 @@ void artic::PrimerScheme::GetPrimerKmers(const std::string& reference, uint32_t 
         {
             auto it = kmerMap.find(kmer);
             if (it == kmerMap.end())
-                kmerMap[kmer] = std::vector<unsigned int>();
+                kmerMap.emplace(kmer, std::vector<unsigned int>());
             kmerMap[kmer].emplace_back(amplicon.GetID());
         }
         kmers.clear();
@@ -364,7 +364,7 @@ void artic::PrimerScheme::_loadScheme(const std::string& filename)
         // check to see if this primer or an alt has not been seen before and then add it to the forward/reverse map
         if (primer->IsForward())
         {
-            schemeMap::iterator i = _fPrimers.find(canonicalID);
+            primermap_t::iterator i = _fPrimers.find(canonicalID);
             if (i == _fPrimers.end())
             {
                 _fPrimers.emplace(canonicalID, primer);
@@ -377,7 +377,7 @@ void artic::PrimerScheme::_loadScheme(const std::string& filename)
         }
         else
         {
-            schemeMap::iterator j = _rPrimers.find(canonicalID);
+            primermap_t::iterator j = _rPrimers.find(canonicalID);
             if (j == _rPrimers.end())
             {
                 _rPrimers.emplace(canonicalID, primer);
@@ -409,14 +409,14 @@ void artic::PrimerScheme::_validateScheme(void)
     uint64_t spanCounter = 0;
     _minPrimerLen = 999;
     _maxPrimerLen = 0;
-    for (schemeMap::iterator i = _fPrimers.begin(); i != _fPrimers.end(); ++i)
+    for (primermap_t::iterator i = _fPrimers.begin(); i != _fPrimers.end(); ++i)
     {
 
         // add the forward primer start position to the holder
         _fPrimerLocations.emplace_back(i->second->GetStart(), i->second->GetName());
 
         // find the corresponding reverse primer and add the position to the holder
-        schemeMap::iterator j = _rPrimers.find(i->second->GetBaseID() + RIGHT_PRIMER_TAG);
+        primermap_t::iterator j = _rPrimers.find(i->second->GetBaseID() + RIGHT_PRIMER_TAG);
         (j == _rPrimers.end()) ? throw std::runtime_error("can't find matching reverse primer for " + i->second->GetName()) : _rPrimerLocations.emplace_back(j->second->GetEnd(), j->second->GetName());
 
         // increment the amplicon counter and spans
@@ -424,7 +424,7 @@ void artic::PrimerScheme::_validateScheme(void)
         spanCounter += (j->second->GetEnd() - i->second->GetStart());
 
         // create an amplicon and add it to the scheme holder
-        _expAmplicons.emplace_back(Amplicon(i->second, j->second, _numAmplicons));
+        _expAmplicons.emplace_back(Amplicon(i->second, j->second));
 
         // update the min and max primer sizes for the scheme
         if (i->second->GetLen() < _minPrimerLen)
@@ -445,6 +445,13 @@ void artic::PrimerScheme::_validateScheme(void)
     std::sort(_expAmplicons.begin(), _expAmplicons.end(), [](auto& lhs, auto& rhs) {
         return lhs.GetForwardPrimer()->GetEnd() < rhs.GetForwardPrimer()->GetEnd();
     });
+
+    // add amplicon lookup ID so the scheme can do an int->string lookup for amplicon names
+    unsigned int ampliconID = 0;
+    for (artic::Amplicon& amplicon : _expAmplicons)
+        amplicon.SetID(++ampliconID);
+    if (_expAmplicons.size() != _numAmplicons || _numAmplicons != ampliconID)
+        throw std::runtime_error("could not produce all expected amplicons from scheme");
 
     // check all primers have been properly paired
     if (_numAmplicons != _fPrimers.size())
@@ -504,9 +511,12 @@ void artic::PrimerScheme::_validateScheme(void)
 }
 
 // Amplicon constructor.
-artic::Amplicon::Amplicon(Primer* p1, Primer* p2, unsigned int id)
-    : _fPrimer(p1), _rPrimer(p2), _id(id)
+artic::Amplicon::Amplicon(Primer* p1, Primer* p2)
+    : _fPrimer(p1), _rPrimer(p2)
 {
+    // set ID to 0 (no ID) as this will be set by the scheme if needed
+    _id = 0;
+
     // ensure p1 is forward and p2 is reverse
     if (_fPrimer->IsForward() == _rPrimer->IsForward())
         throw std::runtime_error("cannot create amplicon from primers with the same directionality");
@@ -523,6 +533,13 @@ artic::Amplicon::Amplicon(Primer* p1, Primer* p2, unsigned int id)
     // set if properly paired
     _isProperlyPaired = (_fPrimer->GetBaseID() == _rPrimer->GetBaseID()) &&
                         (_fPrimer->GetPrimerPoolID() == _rPrimer->GetPrimerPoolID());
+}
+
+// SetID will assign an ID to the amplicon.
+void artic::Amplicon::SetID(unsigned int id)
+{
+    _id = id;
+    return;
 }
 
 // IsProperlyPaired returns true if this primer is properly paired.

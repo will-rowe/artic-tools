@@ -4,9 +4,9 @@
 #include <boost/dynamic_bitset.hpp>
 #include <htslib/faidx.h>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
+#include "bytell_hash_map.hpp"
 #include "kmers.hpp"
 
 namespace artic
@@ -14,7 +14,8 @@ namespace artic
     class Primer;
     class PrimerScheme;
     class Amplicon;
-    typedef std::unordered_map<std::string, Primer*> schemeMap;
+    typedef ska::bytell_hash_map<std::string, Primer*> primermap_t;
+    typedef ska::bytell_hash_map<artic::kmer_t, std::vector<unsigned int>> kmermap_t;
 
     // SchemeArgs is used to pass arguments to the scheme functions.
     typedef struct SchemeArgs
@@ -160,7 +161,7 @@ namespace artic
         bool CheckPrimerSite(int64_t pos, const std::string& poolName);
 
         // GetPrimerKmers will int encode k-mers from all primers in the scheme and deposit them in the provided map, linked to their amplicon primer origin(s).
-        void GetPrimerKmers(const std::string& reference, uint32_t kSize, std::unordered_map<artic::kmer_t, std::vector<unsigned int>>& kmerMap);
+        void GetPrimerKmers(const std::string& reference, uint32_t kSize, kmermap_t& kmerMap);
 
     private:
         void _loadScheme(const std::string& filename);                  // _loadScheme will load an input file and create the primer objects.
@@ -177,8 +178,8 @@ namespace artic
         int64_t _refStart;                                              // the first position in the reference covered by the primer scheme
         int64_t _refEnd;                                                // the last position in the reference covered by the primer scheme
         std::vector<std::string> _primerPools;                          // the primer pool IDs found in the primer scheme
-        schemeMap _fPrimers;                                            // the forward primers for the scheme
-        schemeMap _rPrimers;                                            // the reverse primers for the scheme
+        primermap_t _fPrimers;                                          // the forward primers for the scheme
+        primermap_t _rPrimers;                                          // the reverse primers for the scheme
         std::vector<std::pair<int64_t, std::string>> _fPrimerLocations; // the start position and primerID of each forward primer in the scheme
         std::vector<std::pair<int64_t, std::string>> _rPrimerLocations; // the end position and primerID of each reverse primer in the scheme
         boost::dynamic_bitset<> _ampliconOverlaps;                      // bit vector encoding all the overlap positions in the scheme
@@ -193,7 +194,10 @@ namespace artic
     {
     public:
         // Amplicon constructor.
-        Amplicon(Primer* p1, Primer* p2, unsigned int id);
+        Amplicon(Primer* p1, Primer* p2);
+
+        // SetID will assign an ID to the amplicon.
+        void SetID(unsigned int id);
 
         // IsProperlyPaired returns true if the amplicon primers are properly paired.
         bool IsProperlyPaired(void);

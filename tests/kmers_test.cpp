@@ -27,6 +27,7 @@ TEST(kmers, rc)
 }
 
 // check that successive k-mer permutations returned by GetNextKmers.
+/*
 TEST(kmers, nextKmers)
 {
     kmer_t a;
@@ -49,6 +50,7 @@ TEST(kmers, nextKmers)
     ASSERT_TRUE(cs == ("CGTAG"));
     ASSERT_TRUE(ds == ("CGTAT"));
 }
+*/
 
 // encoding and decoding k-mers from a sequence.
 TEST(kmers, encoding)
@@ -60,14 +62,20 @@ TEST(kmers, encoding)
     ASSERT_TRUE(kmers.size() == 1);
     ASSERT_TRUE(kmers.front() == expectedEncoding);
 
-    // add the same k-mer again and check it's added
-    artic::GetEncodedKmers(sequence.substr(0, kSize).c_str(), kSize, kSize, kmers);
-    ASSERT_TRUE(kmers.size() == 2);
-    ASSERT_TRUE(kmers.back() == expectedEncoding);
+    // check you can't reuse the provided container
+    try
+    {
+        artic::GetEncodedKmers(sequence.substr(0, kSize).c_str(), kSize, kSize, kmers);
+    }
+    catch (const std::runtime_error& err)
+    {
+        EXPECT_EQ(err.what(), std::string("provided k-mer container already has k-mers in it"));
+    }
+    kmers.clear();
 
     // add the same k-mer but uppercase to check that function is case insensitive
     artic::GetEncodedKmers(seqUpper.substr(0, kSize).c_str(), kSize, kSize, kmers);
-    ASSERT_TRUE(kmers.size() == 3);
+    ASSERT_TRUE(kmers.size() == 1);
     ASSERT_TRUE(kmers.back() == expectedEncoding);
 
     // empty the set and then the whole sequence

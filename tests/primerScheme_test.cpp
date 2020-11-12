@@ -10,7 +10,7 @@ const unsigned int numPools = 2;
 const unsigned int numPrimers = 218;
 const unsigned int numAlts = 22;
 const unsigned int numAmplicons = 98;
-//const unsigned int kSize = 11;
+const unsigned int kSize = 17;
 const std::string pool1 = "nCoV-2019_1";
 const std::string pool2 = "nCoV-2019_2";
 const std::string reference = std::string(TEST_DATA_PATH) + "SCoV2.reference.fasta";
@@ -159,12 +159,66 @@ TEST(primerscheme, amplicons)
 }
 
 // primer kmers
-/*
 TEST(primerscheme, kmers)
 {
+
+    // load a scheme, check for k-mer size, populate k-mer map
     auto ps = artic::PrimerScheme(inputScheme);
-    std::unordered_map<artic::kmer_t, std::vector<unsigned int>> kmerMap;
+    artic::kmermap_t kmerMap;
+    try
+    {
+        ps.GetPrimerKmers(reference, 100, kmerMap);
+        FAIL() << "expected a k-mer size error";
+    }
+    catch (std::runtime_error& err)
+    {
+        EXPECT_EQ(err.what(), std::string("requested k-mer size is greater than the shortest primer in the scheme (22)"));
+    }
+
     ps.GetPrimerKmers(reference, kSize, kmerMap);
+
+    // load the another copy of the scheme and check primer k-mer lookup
+    auto ps2 = artic::PrimerScheme(inputScheme);
+    EXPECT_EQ(ps.GetNumAmplicons(), ps2.GetNumAmplicons());
+    faidx_t* fai = fai_load(reference.c_str());
+    std::string seq1;
+    std::string seq2;
+    artic::kmerset_t kmers;
+    for (auto amplicon : ps2.GetExpAmplicons())
+    {
+
+        // get k-mers from forward and reverse primers
+        auto p1 = amplicon.GetForwardPrimer();
+        p1->GetSeq(fai, ps2.GetReferenceName(), seq1);
+        artic::GetEncodedKmers(seq1.c_str(), seq1.size(), kSize, kmers);
+        auto p2 = amplicon.GetReversePrimer();
+        p2->GetSeq(fai, ps2.GetReferenceName(), seq2);
+        artic::GetEncodedKmers(seq2.c_str(), seq2.size(), kSize, kmers);
+
+        // loop over the amplicon primer k-mers and check against the other scheme copy
+        for (auto kmer : kmers)
+        {
+            auto it = kmerMap.find(kmer);
+            ASSERT_TRUE(it != kmerMap.end());
+            bool found = false;
+            for (auto id : it->second)
+            {
+                if (id == amplicon.GetID())
+                {
+                    found = true;
+                    EXPECT_EQ(ps.GetAmpliconName(id), amplicon.GetName());
+                }
+            }
+            ASSERT_TRUE(found);
+        }
+        kmers.clear();
+        seq1.clear();
+        seq2.clear();
+    }
+    if (fai)
+        fai_destroy(fai);
+
+    /*
     for (auto x : kmerMap)
     {
         std::string decoded;
@@ -175,5 +229,5 @@ TEST(primerscheme, kmers)
             std::cerr << "\tlocated in amplicon: " << y << " --- " << ps.GetAmpliconName(y) << std::endl;
         }
     }
+    */
 }
-*/
