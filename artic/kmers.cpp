@@ -13,7 +13,7 @@ namespace artic
             throw std::runtime_error("k-mer size must be <= " + std::to_string(MAX_K_SIZE));
         //if (!kmers.empty())
         //    throw std::runtime_error("provided k-mer container already has k-mers in it");
-        kmers.reserve(kmers.size() + (seqLen - kSize + 1));
+        //kmers.reserve(kmers.size() + (seqLen - kSize + 1));
         uint64_t kmerMask = (1ULL << (2 * kSize)) - 1;
         uint64_t bitShift = 2 * (kSize - 1);
         kmer_t x[2];
