@@ -404,6 +404,7 @@ void artic::PrimerScheme::_validateScheme(void)
     if (_fPrimers.size() != _rPrimers.size())
         throw std::runtime_error("number of forward primers does not match number of reverse primers (after alt merging) - " + std::to_string(_fPrimers.size()) + " vs. " + std::to_string(_rPrimers.size()));
     _numAmplicons = 0;
+    _maxAmpliconSpan = 0;
 
     // cycle through the map holding the forward primers
     uint64_t spanCounter = 0;
