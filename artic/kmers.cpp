@@ -16,6 +16,7 @@ namespace artic
         uint64_t kmerMask = (1ULL << (2 * kSize)) - 1;
         uint64_t bitShift = 2 * (kSize - 1);
         kmer_t x[2];
+        x[0] = x[1] = 0;
         uint32_t l = 0;
         for (uint32_t i = 0; i < seqLen; i++)
         {
