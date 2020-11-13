@@ -367,7 +367,7 @@ void artic::PrimerScheme::_loadScheme(const std::string& filename)
             primermap_t::iterator i = _fPrimers.find(canonicalID);
             if (i == _fPrimers.end())
             {
-                _fPrimers.emplace(canonicalID, primer);
+                _fPrimers.insert(std::make_pair(canonicalID, primer));
                 continue;
             }
 
@@ -380,7 +380,7 @@ void artic::PrimerScheme::_loadScheme(const std::string& filename)
             primermap_t::iterator j = _rPrimers.find(canonicalID);
             if (j == _rPrimers.end())
             {
-                _rPrimers.emplace(canonicalID, primer);
+                _rPrimers.insert(std::make_pair(canonicalID, primer));
                 continue;
             }
 
