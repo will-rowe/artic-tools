@@ -87,16 +87,18 @@ void artic::Primer::GetSeq(faidx_t* reference, const std::string& refID, std::st
     if (!reference)
         throw std::runtime_error("no reference fasta provided");
     int len;
-    primerSeq = faidx_fetch_seq(
+    char* seq = faidx_fetch_seq(
         reference,
         refID.c_str(),
         _start,
         _end - 1,
         &len);
-    if (primerSeq.empty())
+    if (!seq)
         throw std::runtime_error("cannot fetch the reference sequence");
     if (len != int(GetLen()))
         throw std::runtime_error("did not fetch correct number of primer bases (got " + std::to_string(len) + ")");
+    primerSeq = seq;
+    free(seq);
     return;
 }
 
