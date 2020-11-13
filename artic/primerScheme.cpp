@@ -263,9 +263,7 @@ void artic::PrimerScheme::GetPrimerKmers(const std::string& reference, uint32_t 
 
         // add each kmer to the map and link it to the amplicon
         for (auto kmer : kmers)
-        {
             kmerMap[kmer].emplace_back(amplicon.GetID());
-        }
         kmers.clear();
     }
     if (fai)

@@ -7,7 +7,7 @@
 #ifndef KSEQ_INIT_READY
 #define KSEQ_INIT_READY
 #include "kseq.h"
-KSEQ_INIT(gzFile, gzread);
+KSEQ_INIT(gzFile, gzread)
 #endif
 
 namespace artic
