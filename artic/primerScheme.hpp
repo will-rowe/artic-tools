@@ -5,9 +5,8 @@
 #include <htslib/faidx.h>
 #include <string>
 #include <vector>
-#include <unordered_map>
 
-//#include "bytell_hash_map.hpp"
+#include "bytell_hash_map.hpp"
 #include "kmers.hpp"
 
 namespace artic
@@ -15,11 +14,8 @@ namespace artic
     class Primer;
     class PrimerScheme;
     class Amplicon;
-    //typedef ska::bytell_hash_map<std::string, Primer> primermap_t;
-    //typedef ska::bytell_hash_map<artic::kmer_t, std::vector<unsigned int>> kmermap_t;
-    typedef std::unordered_map<std::string, Primer> primermap_t;
-    typedef std::unordered_map<artic::kmer_t, std::vector<unsigned int>> kmermap_t;
-
+    typedef ska::bytell_hash_map<std::string, Primer> primermap_t;
+    typedef ska::bytell_hash_map<artic::kmer_t, std::vector<unsigned int>> kmermap_t;
 
     // SchemeArgs is used to pass arguments to the scheme functions.
     typedef struct SchemeArgs
