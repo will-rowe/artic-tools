@@ -110,20 +110,7 @@ artic::PrimerScheme::PrimerScheme(const std::string& inputFile)
 }
 
 // PrimerScheme destructor.
-artic::PrimerScheme::~PrimerScheme(void)
-{
-    // properly destory the primer scheme (maps of pointers)
-    for (primermap_t::iterator i = _fPrimers.begin(); i != _fPrimers.end(); ++i)
-    {
-        delete (i->second);
-        i->second = nullptr;
-    }
-    for (primermap_t::iterator j = _rPrimers.begin(); j != _rPrimers.end(); ++j)
-    {
-        delete (j->second);
-        j->second = nullptr;
-    }
-}
+artic::PrimerScheme::~PrimerScheme(void) {}
 
 // GetFileName returns the filename that the primer scheme was loaded from.
 const std::string& artic::PrimerScheme::GetFileName(void) const { return _filename; }
@@ -233,7 +220,7 @@ artic::Amplicon artic::PrimerScheme::FindPrimers(int64_t segStart, int64_t segEn
         throw std::runtime_error("primer dropped from scheme - " + fPrimerID + " & " + rPrimerID);
 
     // return an amplicon with no ID (0) as this is not guarenteed to be an expected scheme amplicon
-    return Amplicon(i->second, j->second);
+    return Amplicon(&i->second, &j->second);
 }
 
 // CheckAmpliconOverlap returns true if the queried position is covered by multiple primers.
@@ -342,51 +329,53 @@ void artic::PrimerScheme::_loadScheme(const std::string& filename)
         }
 
         // try converting the primer scheme row into a primer object
-        Primer* primer = 0;
         try
         {
-            primer = new Primer(std::stoi(row[1]), std::stoi(row[2]), row[3], poolID);
+            Primer primer(std::stoi(row[1]), std::stoi(row[2]), row[3], poolID);
+
+            // increment the raw primer counter
+            _numPrimers++;
+
+            // chomp off any alt tag to get the canonical primer ID
+            std::string canonicalID = row[3].substr(0, row[3].find(ALT_PRIMER_TAG));
+
+            // check to see if this primer or an alt has not been seen before and then add it to the forward/reverse map
+            if (primer.IsForward())
+            {
+                primermap_t::iterator i = _fPrimers.find(canonicalID);
+                if (i == _fPrimers.end())
+                {
+                    _fPrimers.emplace(canonicalID, primer);
+                    continue;
+                }
+
+                // otherwise, the primer has been seen before so it's an alt that needs merging
+                i->second.MergeAlt(primer);
+                _numAlts++;
+            }
+            else
+            {
+                primermap_t::iterator j = _rPrimers.find(canonicalID);
+                if (j == _rPrimers.end())
+                {
+                    _rPrimers.emplace(canonicalID, primer);
+                    continue;
+                }
+
+                // otherwise, the primer has been seen before so it's an alt that needs merging
+                j->second.MergeAlt(primer);
+                _numAlts++;
+            }
         }
         catch (const std::exception& e)
         {
             std::cerr << "skipping row " << rowIterator << " in scheme - " << e.what() << std::endl;
             continue;
         }
-        if (!primer)
+        catch (...)
+        {
             std::cerr << "failed to produce primer from row " << rowIterator << " in primer scheme" << std::endl;
-
-        // increment the raw primer counter
-        _numPrimers++;
-
-        // chomp off any alt tag to get the canonical primer ID
-        std::string canonicalID = row[3].substr(0, row[3].find(ALT_PRIMER_TAG));
-
-        // check to see if this primer or an alt has not been seen before and then add it to the forward/reverse map
-        if (primer->IsForward())
-        {
-            primermap_t::iterator i = _fPrimers.find(canonicalID);
-            if (i == _fPrimers.end())
-            {
-                _fPrimers.insert(std::make_pair(canonicalID, primer));
-                continue;
-            }
-
-            // otherwise, the primer has been seen before so it's an alt that needs merging
-            i->second->MergeAlt(*primer);
-            _numAlts++;
-        }
-        else
-        {
-            primermap_t::iterator j = _rPrimers.find(canonicalID);
-            if (j == _rPrimers.end())
-            {
-                _rPrimers.insert(std::make_pair(canonicalID, primer));
-                continue;
-            }
-
-            // otherwise, the primer has been seen before so it's an alt that needs merging
-            j->second->MergeAlt(*primer);
-            _numAlts++;
+            return;
         }
     }
     ifile.close();
@@ -414,28 +403,28 @@ void artic::PrimerScheme::_validateScheme(void)
     {
 
         // add the forward primer start position to the holder
-        _fPrimerLocations.emplace_back(i->second->GetStart(), i->second->GetName());
+        _fPrimerLocations.emplace_back(i->second.GetStart(), i->second.GetName());
 
         // find the corresponding reverse primer and add the position to the holder
-        primermap_t::iterator j = _rPrimers.find(i->second->GetBaseID() + RIGHT_PRIMER_TAG);
-        (j == _rPrimers.end()) ? throw std::runtime_error("can't find matching reverse primer for " + i->second->GetName()) : _rPrimerLocations.emplace_back(j->second->GetEnd(), j->second->GetName());
+        primermap_t::iterator j = _rPrimers.find(i->second.GetBaseID() + RIGHT_PRIMER_TAG);
+        (j == _rPrimers.end()) ? throw std::runtime_error("can't find matching reverse primer for " + i->second.GetName()) : _rPrimerLocations.emplace_back(j->second.GetEnd(), j->second.GetName());
 
         // increment the amplicon counter and spans
         _numAmplicons++;
-        spanCounter += (j->second->GetEnd() - i->second->GetStart());
+        spanCounter += (j->second.GetEnd() - i->second.GetStart());
 
         // create an amplicon and add it to the scheme holder
-        _expAmplicons.emplace_back(Amplicon(i->second, j->second));
+        _expAmplicons.emplace_back(Amplicon(&i->second, &j->second));
 
         // update the min and max primer sizes for the scheme
-        if (i->second->GetLen() < _minPrimerLen)
-            _minPrimerLen = i->second->GetLen();
-        if (i->second->GetLen() > _maxPrimerLen)
-            _maxPrimerLen = i->second->GetLen();
-        if (j->second->GetLen() < _minPrimerLen)
-            _minPrimerLen = j->second->GetLen();
-        if (j->second->GetLen() > _maxPrimerLen)
-            _maxPrimerLen = j->second->GetLen();
+        if (i->second.GetLen() < _minPrimerLen)
+            _minPrimerLen = i->second.GetLen();
+        if (i->second.GetLen() > _maxPrimerLen)
+            _maxPrimerLen = i->second.GetLen();
+        if (j->second.GetLen() < _minPrimerLen)
+            _minPrimerLen = j->second.GetLen();
+        if (j->second.GetLen() > _maxPrimerLen)
+            _maxPrimerLen = j->second.GetLen();
         auto span = _expAmplicons.back().GetMaxSpan();
         if ((span.second - span.first) > _maxAmpliconSpan)
             _maxAmpliconSpan = (span.second - span.first);
@@ -493,18 +482,18 @@ void artic::PrimerScheme::_validateScheme(void)
     {
         for (auto const& primer : _fPrimers)
         {
-            if (primer.second->GetPrimerPoolID() == poolID)
+            if (primer.second.GetPrimerPoolID() == poolID)
             {
 
-                for (auto bitSetter = (primer.second->GetStart() + (_refEnd * poolID)); bitSetter < (primer.second->GetEnd() + (_refEnd * poolID)); bitSetter++)
+                for (auto bitSetter = (primer.second.GetStart() + (_refEnd * poolID)); bitSetter < (primer.second.GetEnd() + (_refEnd * poolID)); bitSetter++)
                     _primerSites[bitSetter] = 1;
             }
         }
         for (auto const& primer : _rPrimers)
         {
-            if (primer.second->GetPrimerPoolID() == poolID)
+            if (primer.second.GetPrimerPoolID() == poolID)
             {
-                for (auto bitSetter = (primer.second->GetEnd() + (_refEnd * poolID)); bitSetter < (primer.second->GetStart() + (_refEnd * poolID)); bitSetter++)
+                for (auto bitSetter = (primer.second.GetEnd() + (_refEnd * poolID)); bitSetter < (primer.second.GetStart() + (_refEnd * poolID)); bitSetter++)
                     _primerSites[bitSetter] = 1;
             }
         }
