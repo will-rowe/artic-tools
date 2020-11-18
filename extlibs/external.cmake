@@ -2,7 +2,7 @@
 ## htslib
 find_library(HTS_LIB hts HINTS /usr/local/lib/ /usr/lib/)
 if (HTS_LIB)
-    message(STATUS "found htslib: ${HTS_LIB} and ${HTS_INCLUDE_DIR}")
+    message(STATUS "found htslib: ${HTS_LIB}")
 else()
     message(STATUS "could not find htslib, attempting to compile")
     set(HTSLIB_SOURCE_DIR ${PROJECT_SOURCE_DIR}/extlibs/htslib)
@@ -62,7 +62,10 @@ set(ARTIC_LINK_LIBRARIES ${HTS_LIB} CLI11::CLI11 kseq++::kseq++ spdlog::spdlog $
 
 # includes
 ## htslib
-find_path(HTS_INCLUDE_DIR NAMES htslib/kseq.h HINTS "${HTSLIB_INSTALL_DIR}" "${HTSLIB_SOURCE_DIR}")
+find_path(HTS_INCLUDE_DIR NAMES htslib/kseq.h HINTS "${HTS_LIB}")
+if (NOT HTS_INCLUDE_DIR)
+    message(FATAL_ERROR "could not include htslib")
+endif()
 
 ## rapidcsv
 set(RAPIDCSV ${PROJECT_SOURCE_DIR}/extlibs/rapidcsv)
