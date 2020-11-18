@@ -8,13 +8,24 @@ else()
     set(HTSLIB_SOURCE_DIR ${PROJECT_SOURCE_DIR}/extlibs/htslib)
     execute_process(
         COMMAND git submodule update --init --recursive -- ${HTSLIB_SOURCE_DIR}
-        WORKING_DIRECTORY ${HTSLIB_SOURCE_DIR}
-        COMMAND autoheader
-        COMMAND autoconf 
-        COMMAND sudo make 
-        COMMAND sudo make install
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    )    
+    )
+    execute_process(
+        COMMAND autoheader
+        WORKING_DIRECTORY ${HTSLIB_SOURCE_DIR}
+    )
+    execute_process(
+        COMMAND autoconf
+        WORKING_DIRECTORY ${HTSLIB_SOURCE_DIR}
+    )
+    execute_process(
+        COMMAND sudo make
+        WORKING_DIRECTORY ${HTSLIB_SOURCE_DIR}
+    )
+    execute_process(
+        COMMAND sudo make install
+        WORKING_DIRECTORY ${HTSLIB_SOURCE_DIR}
+    )  
 endif()
 
 ## cli11
