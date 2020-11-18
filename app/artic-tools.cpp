@@ -63,7 +63,7 @@ int main(int argc, char** argv)
     softmaskCmd->add_flag("--verbose", verbose, "Output debugging information to STDERR");
 
     // add amplitig options and flags
-    amplitigCmd->add_option("-i,--fastqFiles", inputFiles, "The input FASTQ files");
+    amplitigCmd->add_option("-i,--fastqFiles", inputFiles, "The input FASTQ files")->required();
     amplitigCmd->add_option("scheme", schemeArgs.schemeFile, "The ARTIC primer scheme")->required()->check(CLI::ExistingFile);
     amplitigCmd->add_option("-r,--refSeq", schemeArgs.refSeqFile, "The reference sequence for the primer scheme (FASTA format)")->required();
     amplitigCmd->add_option("-k,--kmerSize", kmerSize, "The k-mer size to use (default = 11)");
