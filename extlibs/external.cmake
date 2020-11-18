@@ -9,7 +9,10 @@ else()
     execute_process(
         COMMAND git submodule update --init --recursive -- ${HTSLIB_SOURCE_DIR}
         WORKING_DIRECTORY ${HTSLIB_SOURCE_DIR}
-        COMMAND autoheader && autoconf && sudo make && sudo make install
+        COMMAND autoheader
+        COMMAND autoconf 
+        COMMAND sudo make 
+        COMMAND sudo make install
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     )    
 endif()
