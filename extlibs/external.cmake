@@ -25,7 +25,11 @@ else()
     execute_process(
         COMMAND sudo make install
         WORKING_DIRECTORY ${HTSLIB_SOURCE_DIR}
-    )  
+    )
+    find_library(HTS_LIB hts HINTS /usr/local/lib/ /usr/lib/)
+    if (NOT HTS_LIB)
+        message(FATAL_ERROR "could not install htslib")
+    endif()
 endif()
 
 ## cli11
