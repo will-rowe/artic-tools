@@ -1,5 +1,5 @@
 #include <algorithm>
-#include <filesystem>
+#include <experimental/filesystem>
 #include <iostream>
 #include <kseq++/seqio.hpp>
 #include <utility>
@@ -169,8 +169,9 @@ void artic::Amplitigger::Run()
     LOG_TRACE("\ttotal dropped reads:\t{}", _droppedLong + _droppedShort);
     LOG_TRACE("\t- short reads (<{}):\t{}", _minReadLength, _droppedShort);
     LOG_TRACE("\t- long reads (>{}):\t{}", _maxReadLength, _droppedLong);
+}
 
-    /*
+/*
 grab a read
 get vector of k-mers
 loop through the vector and check against primer k-mers
