@@ -1,11 +1,13 @@
 #include <algorithm>
 #include <iostream>
+#include <kseq++/seqio.hpp>
 #include <utility>
 
 #include "amplitig.hpp"
-#include "fastqParser.hpp"
 #include "kmers.hpp"
 #include "log.hpp"
+
+using namespace klibpp;
 
 // Amplitigger constructor.
 artic::Amplitigger::Amplitigger(artic::PrimerScheme* primerScheme, const std::string& refFile, const std::vector<std::string> inputFiles, unsigned int kmerSize)
@@ -46,6 +48,19 @@ artic::Amplitigger::Amplitigger(artic::PrimerScheme* primerScheme, const std::st
 void artic::Amplitigger::Run()
 {
 
+    KSeq record;
+    SeqStreamIn iss(_inputFiles.front().c_str());
+    while (iss >> record)
+    {
+        std::cout << record.name << std::endl;
+        if (!record.comment.empty())
+            std::cout << record.comment << std::endl;
+        std::cout << record.seq << std::endl;
+        if (!record.qual.empty())
+            std::cout << record.qual << std::endl;
+    }
+
+    /*
     // get the FASTQ parser ready
     size_t fileNum = 0;
     artic::FastqReader fastqReader(_inputFiles);
@@ -59,7 +74,7 @@ void artic::Amplitigger::Run()
 
     // process the reads
     LOG_TRACE("collecting read k-mers");
-    for (int seqLen; (seqLen = fastqReader.GetRecord(seq, fileNum)) > 0;)
+    for (int seqLen; (seqLen = fastqReader.GetRecord(seq, fileNum)) >= 0;)
     {
 
         // check read length
@@ -157,6 +172,7 @@ void artic::Amplitigger::Run()
         kmers.clear();
         ampliconIDs.clear();
     }
+    fastqReader.Close();
 
     // print some stats
     LOG_TRACE("finished processing reads")
@@ -164,6 +180,7 @@ void artic::Amplitigger::Run()
     LOG_TRACE("\ttotal dropped reads:\t{}", _droppedLong + _droppedShort);
     LOG_TRACE("\t- short reads (<{}):\t{}", _minReadLength, _droppedShort);
     LOG_TRACE("\t- long reads (>{}):\t{}", _maxReadLength, _droppedLong);
+    */
 }
 
 /*

@@ -40,13 +40,7 @@ jobs:
       env: ["CXX=clang++", "XCODE_VERSION=11.3.1"]
 
 install:
-  # get the submodules
   - git submodule update --init --recursive
-
-  # install htslib
-  - pushd extlibs/htslib
-  - autoheader && autoconf && sudo make && sudo make install
-  - popd
 
 script:
   - g++ --version
