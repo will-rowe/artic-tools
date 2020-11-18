@@ -16,3 +16,6 @@
 [submodule "extlibs/kseq++"]
 	path = extlibs/kseq++
 	url = https://github.com/cartoonist/kseqpp
+[submodule "extlibs/flat_hash_map"]
+	path = extlibs/flat_hash_map
+	url = https://github.com/skarupke/flat_hash_map
