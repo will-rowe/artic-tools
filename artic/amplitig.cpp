@@ -1,5 +1,5 @@
 #include <algorithm>
-#include <experimental/filesystem>
+#include <boost/filesystem.hpp>
 #include <iostream>
 #include <kseq++/seqio.hpp>
 #include <utility>
@@ -57,7 +57,7 @@ void artic::Amplitigger::Run()
     LOG_TRACE("processing");
     for (auto file : _inputFiles)
     {
-        if (!std::filesystem::exists(file))
+        if (!boost::filesystem::exists(file))
             throw std::runtime_error("supplied file does not exist:\t" + file);
         LOG_TRACE("\treading file:\t{}", file);
 
