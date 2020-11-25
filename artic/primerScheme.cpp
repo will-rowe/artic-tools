@@ -183,6 +183,16 @@ const std::string artic::PrimerScheme::GetAmpliconName(unsigned int id)
     return _expAmplicons.at(id - 1).GetName();
 }
 
+// GetAmplicon returns an amplicon from the scheme, based on the provided amplicon int ID.
+const artic::Amplicon& artic::PrimerScheme::GetAmplicon(unsigned int id)
+{
+    if (id == 0)
+        throw std::runtime_error("provided an unassigned amplicon ID");
+    if (id > _numAmplicons)
+        throw std::runtime_error("provided amplicon ID exceeds number of amplicons in the scheme");
+    return _expAmplicons.at(id - 1);
+}
+
 // FindPrimers returns a primer pair with the nearest forward and reverse primer for a given segment start and end.
 // Note: the primer pair may not be correctly paired, check using the IsProperlyPaired() method
 artic::Amplicon artic::PrimerScheme::FindPrimers(int64_t segStart, int64_t segEnd)

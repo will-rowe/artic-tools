@@ -154,6 +154,9 @@ namespace artic
         // GetAmpliconName returns a string name for an amplicon in the scheme, based on the provided amplicon int ID.
         const std::string GetAmpliconName(unsigned int id);
 
+        // GetAmplicon returns an amplicon from the scheme, based on the provided amplicon int ID.
+        const Amplicon& GetAmplicon(unsigned int id);
+
         // FindPrimers returns pointers to the nearest forward and reverse primer, given an alignment segment's start and end position.
         Amplicon FindPrimers(int64_t segStart, int64_t segEnd);
 
