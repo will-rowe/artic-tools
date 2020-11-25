@@ -191,9 +191,11 @@ TEST(primerscheme, kmers)
         auto p1 = amplicon.GetForwardPrimer();
         p1->GetSeq(fai, ps2.GetReferenceName(), seq1);
         artic::GetEncodedKmers(seq1.c_str(), seq1.size(), kSize, kmers);
+        EXPECT_EQ(kmers.size(), (seq1.size() - kSize + 1));
         auto p2 = amplicon.GetReversePrimer();
         p2->GetSeq(fai, ps2.GetReferenceName(), seq2);
         artic::GetEncodedKmers(seq2.c_str(), seq2.size(), kSize, kmers);
+        EXPECT_EQ(kmers.size(), ((seq1.size() - kSize + 1) + (seq2.size() - kSize + 1)));
 
         // loop over the amplicon primer k-mers and check against the other scheme copy
         for (auto kmer : kmers)

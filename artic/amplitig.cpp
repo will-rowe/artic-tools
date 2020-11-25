@@ -11,8 +11,8 @@
 using namespace klibpp;
 
 // Amplitigger constructor.
-artic::Amplitigger::Amplitigger(artic::PrimerScheme* primerScheme, const std::string& refFile, const std::vector<std::string> inputFiles, unsigned int kmerSize)
-    : _primerScheme(primerScheme), _refFile(refFile), _inputFiles(inputFiles), _kmerSize(kmerSize)
+artic::Amplitigger::Amplitigger(artic::PrimerScheme* primerScheme, const std::string& refFile, const std::vector<std::string> inputFiles, unsigned int kmerSize, float kmerMatch)
+    : _primerScheme(primerScheme), _refFile(refFile), _inputFiles(inputFiles), _kmerSize(kmerSize), _minPrimerKmers(kmerMatch)
 {
 
     // check the params
@@ -23,8 +23,7 @@ artic::Amplitigger::Amplitigger(artic::PrimerScheme* primerScheme, const std::st
     if (_inputFiles.size() == 0)
         throw std::runtime_error("no FASTQ files provided");
 
-    // get thresholds
-    _minPrimerKmers = 0.9;
+    // TODO: collect thresholds from user?
     _minReadLength = 100;
     _maxReadLength = _primerScheme->GetMaxAmpliconSpan() + (0.10 * _primerScheme->GetMaxAmpliconSpan());
 
@@ -32,14 +31,13 @@ artic::Amplitigger::Amplitigger(artic::PrimerScheme* primerScheme, const std::st
     _readCounter = 0;
     _droppedLong = 0;
     _droppedShort = 0;
-
-    // get the containers for the expected amplicons
-    //for (auto amplicon : _primerScheme->GetExpAmplicons())
-    //    _amplicons.emplace(amplicon.GetName(), amplicon);
+    _droppedUnbinned = 0;
+    _multibinned = 0;
 
     // load the primer k-mers
     LOG_TRACE("collecting primer k-mers");
     LOG_TRACE("\tk-mer size used:\t{}", _kmerSize);
+    LOG_TRACE("\tk-mer matches required:\t{}%", _minPrimerKmers);
     LOG_TRACE("\treference fasta file:\t{}", _refFile);
     _primerScheme->GetPrimerKmers(_refFile, _kmerSize, _primerKmerMap);
     LOG_TRACE("\ttotal unique k-mers:\t{}", _primerKmerMap.size());
@@ -64,10 +62,10 @@ void artic::Amplitigger::Run()
         SeqStreamIn iss(file.c_str());
         while (iss >> record)
         {
-            seqLen = record.seq.size();
+            _readCounter++;
 
             // check read length
-            _readCounter++;
+            seqLen = record.seq.size();
             if (seqLen < _minReadLength)
             {
                 _droppedShort++;
@@ -79,10 +77,14 @@ void artic::Amplitigger::Run()
                 continue;
             }
 
+            // clear sets
+            kmers.clear();
+            ampliconIDs.clear();
+
             // get the read k-mers
             artic::GetEncodedKmers(record.seq.c_str(), seqLen, _kmerSize, kmers);
 
-            // assign read to amplicon
+            // check read k-mers against primer scheme k-mers, keep amplicon IDs for all matches
             for (auto kmer : kmers)
             {
 
@@ -94,13 +96,14 @@ void artic::Amplitigger::Run()
                     ampliconIDs.insert(ampliconIDs.end(), it->second.begin(), it->second.end());
                 }
             }
-            sort(ampliconIDs.begin(), ampliconIDs.end());
 
+            // sort the matching IDs and then find the best candidate amplicon ID for this read
+            std::sort(ampliconIDs.begin(), ampliconIDs.end());
             std::vector<std::pair<unsigned int, int>> ampliconCandidates;
             int chain = 0;
             for (size_t i = 1; i < ampliconIDs.size(); i++)
             {
-                // if successive match, keep building the chain
+                // if successive match, continue to the next ID and keep building the chain
                 if (ampliconIDs.at(i - 1) == ampliconIDs.at(i))
                 {
                     chain++;
@@ -141,34 +144,41 @@ void artic::Amplitigger::Run()
             }
 
             // process the likely amplicons
-            switch (ampliconCandidates.size())
+            int binned = 0;
+            for (auto candidate : ampliconCandidates)
             {
-                case 0:
-                    //LOG_ERROR("no amplicon found....");
-                    break;
-                case 1:
-                    LOG_TRACE("{}\t{}\t{}", record.name, _primerScheme->GetAmpliconName(ampliconCandidates.front().first), ampliconCandidates.front().second);
-
-                    // compare biggest chain to max %k-mer content
-                    // remove chains with multiple identities
-                    break;
-                default:
-                    //LOG_ERROR("too many amplicons found - {} amplicons with {} k-mers", ampliconCandidates.size(), ampliconCandidates.front().second);
-                    break;
+                auto amplicon = _primerScheme->GetAmplicon(candidate.first);
+                auto ampliconKmers = (amplicon.GetForwardPrimer()->GetLen() + amplicon.GetReversePrimer()->GetLen()) - (_kmerSize * 2) + 2;
+                auto propKmers = float(candidate.second) / float(ampliconKmers);
+                if (propKmers >= _minPrimerKmers)
+                {
+                    std::cout << record.name << "\t" << amplicon.GetName() << "\t" << propKmers << std::endl;
+                    binned++;
+                }
             }
 
-            // clear the holders ready for the next read
-            kmers.clear();
-            ampliconIDs.clear();
+            // update some numbers
+            if (binned > 1)
+                _multibinned++;
+
+            // this will catch reads which didn't get any primer k-mer hits AND those which had too small a match proportion
+            if (binned == 0)
+                _droppedUnbinned++;
+
+            // compare biggest chain to max %k-mer content
+            // remove chains with multiple identities
         }
     }
 
     // print some stats
     LOG_TRACE("finished processing reads")
     LOG_TRACE("\ttotal input reads:\t{}", _readCounter);
-    LOG_TRACE("\ttotal dropped reads:\t{}", _droppedLong + _droppedShort);
+    LOG_TRACE("\ttotal dropped reads:\t{}", (_droppedLong + _droppedShort + _droppedUnbinned));
     LOG_TRACE("\t- short reads (<{}):\t{}", _minReadLength, _droppedShort);
     LOG_TRACE("\t- long reads (>{}):\t{}", _maxReadLength, _droppedLong);
+    LOG_TRACE("\t- unbinned reads:\t{}", _droppedUnbinned);
+    LOG_TRACE("\ttotal binned reads:\t{}", (_readCounter - (_droppedLong + _droppedShort + _droppedUnbinned)));
+    LOG_TRACE("\t- multibinned reads:\t{}", _multibinned);
 }
 
 /*

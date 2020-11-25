@@ -17,7 +17,7 @@ namespace artic
     {
     public:
         // Amplitigger constructor and destructor.
-        Amplitigger(artic::PrimerScheme* primerScheme, const std::string& refFile, const std::vector<std::string> inputFiles, unsigned int kmerSize);
+        Amplitigger(artic::PrimerScheme* primerScheme, const std::string& refFile, const std::vector<std::string> inputFiles, unsigned int kmerSize, float kmerMatch);
         //~Amplitigger(void);
 
         // Run will perform the amplitigging.
@@ -41,9 +41,11 @@ namespace artic
         int _maxReadLength;     // drop reads longer than this length (default is to use max amplicon span in the scheme + 10%)
 
         // counters
-        unsigned int _readCounter;  // number of reads processed by the softmasker
-        unsigned int _droppedLong;  // number of reads which were deemed too long
-        unsigned int _droppedShort; // number of reads which were demmed too short
+        unsigned int _readCounter;     // number of reads processed by the softmasker
+        unsigned int _droppedLong;     // number of reads which were deemed too long and dropped prior to binning
+        unsigned int _droppedShort;    // number of reads which were deemed too short and dropped prior to binning
+        unsigned int _droppedUnbinned; // number of reads which did not get binned to an amplicon in the scheme
+        unsigned int _multibinned;     // number of reads which were binned into multiple amplicons
     };
 
 } // namespace artic
