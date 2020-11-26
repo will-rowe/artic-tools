@@ -40,7 +40,24 @@ artic::Amplitigger::Amplitigger(artic::PrimerScheme* primerScheme, const std::st
     LOG_TRACE("\tk-mer matches required:\t{}%", _minPrimerKmers);
     LOG_TRACE("\treference fasta file:\t{}", _refFile);
     _primerScheme->GetPrimerKmers(_refFile, _kmerSize, _primerKmerMap);
-    LOG_TRACE("\ttotal unique k-mers:\t{}", _primerKmerMap.size());
+    LOG_TRACE("\ttotal distinct k-mers:\t{}", _primerKmerMap.size());
+
+    // TODO: filter k-mers and retain only mutually exclusive k-mers
+    int meCount = 0;
+    for (auto i : _primerKmerMap)
+    {
+        if (i.second.size() > 1)
+        {
+            _primerKmerMap.erase(i.first);
+        }
+        else
+        {
+            meCount++;
+        }
+    }
+    LOG_TRACE("\ttotal mutually exclusive k-mers:\t{}", meCount);
+    if (meCount != _primerKmerMap.size())
+        throw std::runtime_error("did not remove k-mers...");
 }
 
 // Run will perform the amplicon read binning on the open FASTQ file.
@@ -182,6 +199,10 @@ void artic::Amplitigger::Run()
 }
 
 /*
+collect primer k-mers
+remove any k-mers shared between primers
+check each primer has some primers left / select a minimizer?
+
 grab a read
 get vector of k-mers
 loop through the vector and check against primer k-mers
