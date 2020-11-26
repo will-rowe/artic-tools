@@ -34,7 +34,7 @@ project(ARTIC LANGUAGES CXX)
 set(ARTIC_PROG_NAME artic-tools)
 set(ARTIC_VERSION_MAJOR 0)
 set(ARTIC_VERSION_MINOR 2)
-set(ARTIC_VERSION_PATCH 4)
+set(ARTIC_VERSION_PATCH 5)
 configure_file (
     "${PROJECT_SOURCE_DIR}/artic/version.hpp.in"
     "${PROJECT_SOURCE_DIR}/artic/version.hpp"
