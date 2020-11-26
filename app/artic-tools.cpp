@@ -34,7 +34,7 @@ int main(int argc, char** argv)
     CLI::App* getterCmd = app.add_subcommand("get_scheme", "Download an ARTIC primer scheme and reference sequence");
     CLI::App* validatorCmd = app.add_subcommand("validate_scheme", "Validate an amplicon scheme for compliance with ARTIC standards");
     CLI::App* vcfFilterCmd = app.add_subcommand("check_vcf", "Check a VCF file based on primer scheme info and user-defined cut offs");
-    CLI::App* amplitigCmd = app.add_subcommand("get_amplitigs", "Generate amplitigs from a reference alignment");
+    //CLI::App* amplitigCmd = app.add_subcommand("get_amplitigs", "Generate amplitigs from a reference alignment");
 
     // set up a struct to pass arguments
     // TODO: have a constructor for defaults?
@@ -47,8 +47,8 @@ int main(int argc, char** argv)
     std::string outFileName;
     unsigned int minMAPQ = 15;
     unsigned int normalise = 100;
-    unsigned int kmerSize = 11;
-    float kmerMatches = 0.4;
+    //unsigned int kmerSize = 11;
+    //float kmerMatches = 0.4;
     bool primerStart = false;
     bool removeBadPairs = false;
     bool noReadGroups = false;
@@ -64,11 +64,13 @@ int main(int argc, char** argv)
     softmaskCmd->add_flag("--verbose", verbose, "Output debugging information to STDERR");
 
     // add amplitig options and flags
+    /*
     amplitigCmd->add_option("-i,--fastqFiles", inputFiles, "The input FASTQ files")->required();
     amplitigCmd->add_option("scheme", schemeArgs.schemeFile, "The ARTIC primer scheme")->required()->check(CLI::ExistingFile);
     amplitigCmd->add_option("-r,--refSeq", schemeArgs.refSeqFile, "The reference sequence for the primer scheme (FASTA format)")->required();
     amplitigCmd->add_option("-k,--kmerSize", kmerSize, "The k-mer size to use (default = 11)");
     amplitigCmd->add_option("-m,--kmerMatches", kmerMatches, "The proportion of primer k-mers required to match to a read (default = 0.4)");
+    */
 
     // add get options and flags
     getterCmd->add_option("scheme", schemeArgs.schemeName, "The name of the scheme to download (ebola|nipah|scov2)")->required();
@@ -106,6 +108,7 @@ int main(int argc, char** argv)
     // 1. vadlidate the primer scheme
     // 2. collect the primer k-mers
     // 2. run the amplitiger
+    /*
     amplitigCmd->callback([&]() {
         artic::Log::Init("get_amplitigs");
         LOG_TRACE("starting amplitigger");
@@ -113,6 +116,7 @@ int main(int argc, char** argv)
         auto amplitigger = artic::Amplitigger(&ps, schemeArgs.refSeqFile, inputFiles, kmerSize, kmerMatches);
         amplitigger.Run();
     });
+    */
 
     // add the getter callback
     // 1. download the scheme

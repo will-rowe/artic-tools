@@ -43,7 +43,7 @@ artic::Amplitigger::Amplitigger(artic::PrimerScheme* primerScheme, const std::st
     LOG_TRACE("\ttotal distinct k-mers:\t{}", _primerKmerMap.size());
 
     // TODO: filter k-mers and retain only mutually exclusive k-mers
-    int meCount = 0;
+    size_t meCount = 0;
     for (auto i : _primerKmerMap)
     {
         if (i.second.size() > 1)
