@@ -88,7 +88,7 @@ int main(int argc, char** argv)
     bool dropPrimerVars = false;
     bool dropOverlapFails = false;
     vcfFilterCmd->add_option("vcf", vcfIn, "The input VCF file to filter")->required()->check(CLI::ExistingFile);
-    vcfFilterCmd->add_option("scheme", schemeArgs.schemeName, "The primer scheme to use")->required()->check(CLI::ExistingFile);
+    vcfFilterCmd->add_option("scheme", schemeArgs.schemeFile, "The primer scheme to use")->required()->check(CLI::ExistingFile);
     vcfFilterCmd->add_option("-o,--vcfOut", outFileName, "If provided, will write variants that pass checks");
     vcfFilterCmd->add_flag("--dropPrimerVars", dropPrimerVars, "Will drop variants called within primer regions for the pool");
     vcfFilterCmd->add_flag("--dropOverlapFails", dropOverlapFails, "Will drop variants called once within amplicon overlap regions");
@@ -125,7 +125,7 @@ int main(int argc, char** argv)
         artic::Log::Init("get_scheme");
         LOG_TRACE("starting primer scheme downloader");
         artic::DownloadScheme(schemeArgs);
-        artic::ValidateScheme(schemeArgs);
+        //artic::ValidateScheme(schemeArgs);
     });
 
     // add the validator callback
