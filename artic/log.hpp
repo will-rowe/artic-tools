@@ -1,9 +1,8 @@
 #ifndef LOGGER_H
 #define LOGGER_H
 
-#include <memory>
-
 #include "spdlog/spdlog.h"
+#include <memory>
 
 namespace artic
 {

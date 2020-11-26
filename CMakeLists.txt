@@ -1,7 +1,7 @@
 ######################################################################
 # set up cmake
 ######################################################################
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.10)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_COLOR_MAKEFILE ON)
 set(CMAKE_DISABLE_SOURCE_CHANGES OFF)
@@ -28,7 +28,7 @@ option(BUILD_TESTING "Build unit tests" ON)
 ######################################################################
 # set up the project
 ######################################################################
-project(ARTIC)
+project(ARTIC LANGUAGES CXX)
 
 # set the variables
 set(ARTIC_PROG_NAME artic-tools)
@@ -65,28 +65,17 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 else()
     message(WARNING "You are using an unsupported compiler! Compilation has only been tested with Clang and GCC.")
 endif()
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -W -Wall -Wpedantic")
+if(CMAKE_BUILD_TYPE MATCHES "Debug")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -W -Wall -Wpedantic -O0 -g")
+else()
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -W -Wall -O3")
+endif()
 
 ######################################################################
 # check libraries
 ######################################################################
 # pthreads
 find_package(Threads REQUIRED)
-set(ARTIC_LINK_LIBRARIES ${CMAKE_THREAD_LIBS_INIT} ${ARTIC_LINK_LIBRARIES})
-if(CMAKE_USE_PTHREADS_INIT)
-  set(ARTIC_LINK_LIBRARIES pthread ${ARTIC_LINK_LIBRARIES})
-endif()
-
-# htslib
-find_library(HTS_LIB hts HINTS /usr/local/lib/ /usr/lib/)
-find_path(HTS_INCLUDE_DIR NAMES htslib/kseq.h HINTS "${HTSLIB_INSTALL_DIR}")
-if (HTS_LIB AND HTS_INCLUDE_DIR)
-    message(STATUS "Found htslib: ${HTS_LIB} and ${HTS_INCLUDE_DIR}")
-else()
-    message(FATAL_ERROR "Could not find htslib")
-endif()
-set(ARTIC_INCLUDE_DIRS ${HTS_INCLUDE_DIR} ${ARTIC_INCLUDE_DIRS})
-set(ARTIC_LINK_LIBRARIES ${HTS_LIB} ${ARTIC_LINK_LIBRARIES})
 
 # boost (dynamic bitset)
 set(Boost_USE_STATIC_LIBS OFF) 
@@ -94,18 +83,17 @@ set(Boost_USE_MULTITHREADED ON)
 set(Boost_USE_STATIC_RUNTIME OFF) 
 find_package(Boost 1.45.0 COMPONENTS filesystem REQUIRED) 
 
-# cli11, spdlog
-add_subdirectory(extlibs/CLI11)
-add_subdirectory(extlibs/spdlog)
+# zlib
+find_package(ZLIB REQUIRED)
 
-# rapidcsv
-include_directories(${PROJECT_SOURCE_DIR}/extlibs/rapidcsv/src)
+# link libraries
+set(ARTIC_LINK_LIBRARIES ZLIB::ZLIB ${Boost_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${ARTIC_LINK_LIBRARIES})
+if(CMAKE_USE_PTHREADS_INIT)
+  set(ARTIC_LINK_LIBRARIES pthread ${ARTIC_LINK_LIBRARIES})
+endif()
 
-# google test
-if(BUILD_TESTING)
-    add_subdirectory(extlibs/googletest)
-    include(GoogleTest)
-endif(BUILD_TESTING)
+# external dependencies
+include(${PROJECT_SOURCE_DIR}/extlibs/external.cmake)
 
 ######################################################################
 # build

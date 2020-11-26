@@ -43,8 +43,7 @@ artic::VcfChecker::~VcfChecker(void)
 // Run will perform the softmasking on the open BAM file.
 void artic::VcfChecker::Run()
 {
-    artic::Log::Init("vcfchecker");
-    LOG_TRACE("starting VCF checker");
+    LOG_TRACE("checking VCF file");
     if ((_outfileName.size() != 0))
     {
         LOG_TRACE("\tfiltering variants: true");

@@ -4,18 +4,40 @@
 #include <boost/dynamic_bitset.hpp>
 #include <htslib/faidx.h>
 #include <string>
-#include <unordered_map>
+//#include <unordered_map>
 #include <vector>
+
+#include "bytell_hash_map.hpp"
+#include "kmers.hpp"
 
 namespace artic
 {
-    // DownloadScheme will download a specified primer scheme and the reference sequence.
-    void DownloadScheme(const std::string& schemeName, unsigned int requestedVersion, const std::string& outDir);
-
     class Primer;
     class PrimerScheme;
     class Amplicon;
-    typedef std::unordered_map<std::string, Primer*> schemeMap;
+    //typedef std::unordered_map<std::string, Primer> primermap_t;
+    //typedef std::unordered_map<artic::kmer_t, std::vector<unsigned int>> kmermap_t;
+    typedef ska::bytell_hash_map<std::string, Primer> primermap_t;
+    typedef ska::bytell_hash_map<artic::kmer_t, std::vector<unsigned int>> kmermap_t;
+
+    // SchemeArgs is used to pass arguments to the scheme functions.
+    typedef struct SchemeArgs
+    {
+        std::string schemeName;
+        unsigned int schemeVersion;
+        std::string outDir;
+        std::string refSeqFile;     // fasta file with reference sequence
+        std::string schemeFile;     // bed file with primer coordinates
+        std::string primerSeqsFile; // fasta file with primer sequences
+        std::string insertsFile;    // bed file with insert coordinates
+    } SchemeArgs;
+
+    // DownloadScheme will download a specified primer scheme and the reference sequence.
+    void DownloadScheme(SchemeArgs& args);
+
+    // ValidateScheme will load and validate a specified primer scheme, log stats and return the primer scheme object.
+    // It will optionally write primer insert coordinates and primer sequences to files.
+    PrimerScheme ValidateScheme(SchemeArgs& args);
 
     //******************************************************************************
     // Primer class holds primer information.
@@ -46,8 +68,8 @@ namespace artic
         // GetLen returns the length of the primer sequence.
         unsigned int GetLen(void) const;
 
-        // GetID returns the primerID.
-        const std::string& GetID(void) const;
+        // GetName returns the primerID.
+        const std::string& GetName(void) const;
 
         // GetBaseID returns the baseID of the primer (with _LEFT/_RIGHT stripped).
         std::string GetBaseID(void) const;
@@ -59,7 +81,7 @@ namespace artic
         bool IsForward(void);
 
         // GetSeq returns the primer sequence from a reference.
-        const std::string GetSeq(faidx_t* reference, const std::string& refID) const;
+        void GetSeq(faidx_t* reference, const std::string& refID, std::string& primerSeq) const;
 
     private:
         int64_t _start;        // the reference start position of the primer (0-based, half-open)
@@ -78,17 +100,23 @@ namespace artic
     {
     public:
         // PrimerScheme constructors and destructor.
-        PrimerScheme(const std::string& inputFile, unsigned int schemeVersion);
+        PrimerScheme(const std::string& inputFile);
         ~PrimerScheme(void);
 
-        // GetVersion returns the ARTIC primer scheme version (1/2/3).
-        unsigned int GetVersion(void);
+        // GetFileName returns the filename that the primer scheme was loaded from.
+        const std::string& GetFileName(void) const;
 
         // GetReferenceName returns the reference sequence ID found in the primer scheme.
         const std::string& GetReferenceName(void) const;
 
         // GetNumPrimers returns the total number of primers in the scheme.
         unsigned int GetNumPrimers(void);
+
+        // GetMinPrimerLen returns the minimum primer length in the scheme.
+        unsigned int GetMinPrimerLen(void);
+
+        // GetMaxPrimerLen returns the maximum primer length in the scheme.
+        unsigned int GetMaxPrimerLen(void);
 
         // GetNumAlts returns the number of alts in the primer scheme.
         unsigned int GetNumAlts(void);
@@ -98,6 +126,9 @@ namespace artic
 
         // GetMeanAmpliconSpan returns the mean amplicon span (including primer sequence).
         unsigned int GetMeanAmpliconSpan(void);
+
+        // GetMaxAmpliconSpan returns the max amplicon span (including primer sequence).
+        unsigned int GetMaxAmpliconSpan(void);
 
         // GetPrimerPools returns all the primer pools found in the primer scheme.
         std::vector<std::string> GetPrimerPools(void);
@@ -117,8 +148,14 @@ namespace artic
         // GetNumOverlaps returns the number of reference positions covered by more than one amplicon.
         unsigned int GetNumOverlaps(void);
 
-        // GetExpAmplicons returns a vector to the amplicons the scheme expects to produce.
+        // GetExpAmplicons returns a vector containing the amplicons the scheme expects to produce.
         const std::vector<Amplicon>& GetExpAmplicons(void);
+
+        // GetAmpliconName returns a string name for an amplicon in the scheme, based on the provided amplicon int ID.
+        const std::string GetAmpliconName(unsigned int id);
+
+        // GetAmplicon returns an amplicon from the scheme, based on the provided amplicon int ID.
+        const Amplicon& GetAmplicon(unsigned int id);
 
         // FindPrimers returns pointers to the nearest forward and reverse primer, given an alignment segment's start and end position.
         Amplicon FindPrimers(int64_t segStart, int64_t segEnd);
@@ -129,21 +166,26 @@ namespace artic
         // CheckPrimerSite returns true if the queried position is a primer site for the given pool.
         bool CheckPrimerSite(int64_t pos, const std::string& poolName);
 
-    private:
-        void _loadScheme(const std::string& filename); // _loadScheme will load an input file and create the primer objects.
-        void _validateScheme(void);                    // _validateScheme will check all forward primers have a paired reverse primer and record some primer scheme stats.
+        // GetPrimerKmers will int encode k-mers from all primers in the scheme and deposit them in the provided map, linked to their amplicon primer origin(s).
+        void GetPrimerKmers(const std::string& reference, uint32_t kSize, kmermap_t& kmerMap);
 
-        unsigned int _version;                                          // the primer scheme version (based on the ARTIC versioning)
+    private:
+        void _loadScheme(const std::string& filename);                  // _loadScheme will load an input file and create the primer objects.
+        void _validateScheme(void);                                     // _validateScheme will check all forward primers have a paired reverse primer and record some primer scheme stats.
+        std::string _filename;                                          // the file that the scheme was loaded from
         std::string _referenceID;                                       // the ID of the reference sequence covered by the primer scheme
         unsigned int _numPrimers;                                       // the total number of primers in the scheme
         unsigned int _numAlts;                                          // the number of alts that were merged when the scheme was read
         unsigned int _numAmplicons;                                     // the number of amplicons in the scheme
-        unsigned int _meanAmpliconSpan;                                 // the mean amplicon span
+        unsigned int _meanAmpliconSpan;                                 // the mean amplicon span (incl. primers)
+        unsigned int _maxAmpliconSpan;                                  // the max amplicon span (incl. primers)
+        unsigned int _minPrimerLen;                                     // the minimum primer length in the scheme
+        unsigned int _maxPrimerLen;                                     // the maximum primer length in the scheme
         int64_t _refStart;                                              // the first position in the reference covered by the primer scheme
         int64_t _refEnd;                                                // the last position in the reference covered by the primer scheme
         std::vector<std::string> _primerPools;                          // the primer pool IDs found in the primer scheme
-        schemeMap _fPrimers;                                            // the forward primers for the scheme
-        schemeMap _rPrimers;                                            // the reverse primers for the scheme
+        primermap_t _fPrimers;                                          // the forward primers for the scheme
+        primermap_t _rPrimers;                                          // the reverse primers for the scheme
         std::vector<std::pair<int64_t, std::string>> _fPrimerLocations; // the start position and primerID of each forward primer in the scheme
         std::vector<std::pair<int64_t, std::string>> _rPrimerLocations; // the end position and primerID of each reverse primer in the scheme
         boost::dynamic_bitset<> _ampliconOverlaps;                      // bit vector encoding all the overlap positions in the scheme
@@ -160,11 +202,17 @@ namespace artic
         // Amplicon constructor.
         Amplicon(Primer* p1, Primer* p2);
 
+        // SetID will assign an ID to the amplicon.
+        void SetID(unsigned int id);
+
         // IsProperlyPaired returns true if the amplicon primers are properly paired.
         bool IsProperlyPaired(void);
 
-        // GetID returns the ID string of the primer pair (combines primer IDs).
-        const std::string GetID(void) const;
+        // GetName returns the name for the amplicon (combines primer IDs).
+        const std::string GetName(void) const;
+
+        // GetID returns the numberical ID for the amplicon.
+        unsigned int GetID(void) const;
 
         // GetPrimerPool returns the pool ID for the primer pair (0 returned if not properly paired).
         std::size_t GetPrimerPoolID(void);
@@ -181,10 +229,15 @@ namespace artic
         // GetReversePrimer returns a pointer to the reverse primer in the amplicon.
         const Primer* GetReversePrimer(void);
 
+        // AddKmers adds the k-mers from a sequence to the amplicon.
+        void AddKmers(const char* seq, uint32_t seqLen, uint32_t kSize);
+
     private:
-        Primer* _fPrimer;       // pointer to the forward primer object
-        Primer* _rPrimer;       // pointer to the reverse primer object
-        bool _isProperlyPaired; // denotes if amplicon has properly paired primers
+        Primer* _fPrimer;        // pointer to the forward primer object
+        Primer* _rPrimer;        // pointer to the reverse primer object
+        bool _isProperlyPaired;  // denotes if amplicon has properly paired primers
+        unsigned int _id;        // the amplicon identifier
+        artic::kmerset_t _kmers; // the set of k-mers for this amplicon
     };
 
 } // namespace artic
