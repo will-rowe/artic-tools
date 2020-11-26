@@ -59,7 +59,7 @@ TEST(primerscheme, validity)
     EXPECT_EQ(ps.GetMinPrimerLen(), 22);
     EXPECT_EQ(ps.GetMaxPrimerLen(), 57);
     EXPECT_EQ(ps.GetNumAmplicons(), numAmplicons);
-    EXPECT_EQ(ps.GetMeanAmpliconSpan(), 393);
+    EXPECT_EQ(ps.GetMeanAmpliconSpan(), 343);
 }
 
 // primer access

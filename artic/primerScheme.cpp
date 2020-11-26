@@ -401,86 +401,86 @@ void artic::PrimerScheme::_validateScheme(void)
     _numAmplicons = 0;
     _maxAmpliconSpan = 0;
 
-    // cycle through the map holding the forward primers
-    uint64_t spanCounter = 0;
-    _minPrimerLen = 999;
-    _maxPrimerLen = 0;
+    // check the forward primers for a matching reverse and create an expected amplicon
     for (primermap_t::iterator i = _fPrimers.begin(); i != _fPrimers.end(); ++i)
     {
-
-        // add the forward primer start position to the holder
-        _fPrimerLocations.emplace_back(i->second.GetStart(), i->second.GetName());
-
-        // find the corresponding reverse primer and add the position to the holder
+        // find the corresponding reverse primer
         primermap_t::iterator j = _rPrimers.find(i->second.GetBaseID() + RIGHT_PRIMER_TAG);
-        (j == _rPrimers.end()) ? throw std::runtime_error("can't find matching reverse primer for " + i->second.GetName()) : _rPrimerLocations.emplace_back(j->second.GetEnd(), j->second.GetName());
-
-        // increment the amplicon counter and spans
-        _numAmplicons++;
-        spanCounter += (j->second.GetEnd() - i->second.GetStart());
+        if (j == _rPrimers.end())
+            throw std::runtime_error("can't find matching reverse primer for " + i->second.GetName());
 
         // create an amplicon and add it to the scheme holder
         _expAmplicons.emplace_back(Amplicon(&i->second, &j->second));
-
-        // update the min and max primer sizes for the scheme
-        if (i->second.GetLen() < _minPrimerLen)
-            _minPrimerLen = i->second.GetLen();
-        if (i->second.GetLen() > _maxPrimerLen)
-            _maxPrimerLen = i->second.GetLen();
-        if (j->second.GetLen() < _minPrimerLen)
-            _minPrimerLen = j->second.GetLen();
-        if (j->second.GetLen() > _maxPrimerLen)
-            _maxPrimerLen = j->second.GetLen();
-        auto span = _expAmplicons.back().GetMaxSpan();
-        if ((span.second - span.first) > _maxAmpliconSpan)
-            _maxAmpliconSpan = (span.second - span.first);
+        _numAmplicons++;
     }
-    _meanAmpliconSpan = spanCounter / _numAmplicons;
 
-    // sort the expected amplicon list by reference position
+    // sort the expected amplicon list by reference position (excluding the primer sites)
     std::sort(_expAmplicons.begin(), _expAmplicons.end(), [](auto& lhs, auto& rhs) {
         return lhs.GetForwardPrimer()->GetEnd() < rhs.GetForwardPrimer()->GetEnd();
     });
 
-    // add amplicon lookup ID so the scheme can do an int->string lookup for amplicon names
+    // update the min/max value of the scheme
+    _refStart = _expAmplicons.front().GetForwardPrimer()->GetStart();
+    _refEnd = _expAmplicons.back().GetReversePrimer()->GetEnd();
+
+    // loop through the expected amplicon list for the scheme and populate some scheme stats
     unsigned int ampliconID = 0;
+    uint64_t spanCounter = 0;
+    _ampliconOverlaps.resize(_refEnd, 0);
+    _minPrimerLen = 999;
+    _maxPrimerLen = 0;
     for (artic::Amplicon& amplicon : _expAmplicons)
+    {
+        // add amplicon lookup ID so the scheme can do an int->string lookup for amplicon names
         amplicon.SetID(++ampliconID);
+
+        // check the span (excluding primer sites)
+        auto ampliconSE = amplicon.GetMinSpan();
+        auto span = (ampliconSE.second - ampliconSE.first);
+        spanCounter += span;
+        if (span > _maxAmpliconSpan)
+            _maxAmpliconSpan = span;
+
+        // check forward primer and record sites
+        auto fP = amplicon.GetForwardPrimer();
+        if (fP->GetLen() < _minPrimerLen)
+            _minPrimerLen = fP->GetLen();
+        if (fP->GetLen() > _maxPrimerLen)
+            _maxPrimerLen = fP->GetLen();
+
+        // check reverse primer and record sites
+        auto rP = amplicon.GetReversePrimer();
+        if (rP->GetLen() < _minPrimerLen)
+            _minPrimerLen = rP->GetLen();
+        if (rP->GetLen() > _maxPrimerLen)
+            _maxPrimerLen = rP->GetLen();
+
+        // add the primer sites to the lookups
+        _fPrimerLocations.emplace_back(fP->GetStart(), fP->GetName());
+        _rPrimerLocations.emplace_back(rP->GetEnd(), rP->GetName());
+
+        // store the amplicon overlap regions (excluding primer sites)
+        if (ampliconID != _numAmplicons)
+        {
+            auto nextAmpliconBoundary = _expAmplicons.at(ampliconID).GetForwardPrimer()->GetEnd();
+            if (rP->GetStart() < nextAmpliconBoundary)
+                throw std::runtime_error("gap found in primer scheme - " + std::to_string(rP->GetStart()) + "-" + std::to_string(nextAmpliconBoundary));
+
+            for (; nextAmpliconBoundary < rP->GetStart(); nextAmpliconBoundary++)
+                _ampliconOverlaps[nextAmpliconBoundary] = 1;
+        }
+    }
+    _meanAmpliconSpan = spanCounter / _numAmplicons;
+
+    // basic checks
     if (_expAmplicons.size() != _numAmplicons || _numAmplicons != ampliconID)
         throw std::runtime_error("could not produce all expected amplicons from scheme");
-
-    // check all primers have been properly paired
     if (_numAmplicons != _fPrimers.size())
         throw std::runtime_error("number of amplicons does not match number of forward primers - " + std::to_string(_numAmplicons) + " vs " + std::to_string(_fPrimers.size()));
     if (_numAmplicons != _rPrimers.size())
         throw std::runtime_error("number of amplicons does not match number of reverse primers - " + std::to_string(_numAmplicons) + " vs " + std::to_string(_rPrimers.size()));
-
-    // check the same number of forward and reverse primers have been collected
     if (_fPrimerLocations.size() != _rPrimerLocations.size())
         throw std::runtime_error("mismatched number of forward and reverse primer starts - " + std::to_string(_fPrimerLocations.size()) + " vs " + std::to_string(_rPrimerLocations.size()));
-
-    // sort the start positions
-    std::sort(_fPrimerLocations.begin(), _fPrimerLocations.end());
-    std::sort(_rPrimerLocations.begin(), _rPrimerLocations.end());
-
-    // update the min/max value of the scheme
-    _refStart = _fPrimerLocations.front().first;
-    _refEnd = _rPrimerLocations.back().first;
-
-    // store the primer overlap regions
-    _ampliconOverlaps.resize(_refEnd, 0);
-    for (unsigned int i = 0; i < _numAmplicons - 1; i++)
-    {
-        if (_fPrimerLocations.at(i + 1).first < _rPrimerLocations.at(i).first)
-        {
-            for (auto bitSetter = _fPrimerLocations.at(i + 1).first; bitSetter < _rPrimerLocations.at(i).first; bitSetter++)
-                _ampliconOverlaps[bitSetter] = 1;
-        }
-        else
-        {
-            throw std::runtime_error("gap found in primer scheme - " + std::to_string(_fPrimerLocations.at(i + 1).first) + "-" + std::to_string(_rPrimerLocations.at(i).first));
-        }
-    }
 
     // store the primer sites per pool
     _primerSites.resize(_refEnd * _primerPools.size(), 0);
