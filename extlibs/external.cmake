@@ -104,5 +104,14 @@ if (NOT EXISTS ${FLATHASHMAP})
     )
 endif()
 
+## PicoSHA2
+set(SHA256 ${PROJECT_SOURCE_DIR}/extlibs/PicoSHA2)
+if (NOT EXISTS ${SHA256})
+    execute_process(
+        COMMAND git submodule update --init --recursive -- ${SHA256}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+endif()
+
 ## add them
-set(ARTIC_INCLUDE_DIRS ${HTS_INCLUDE_DIR} ${RAPIDCSV_INCLUDE_DIR} ${FLATHASHMAP} ${ARTIC_INCLUDE_DIRS})
+set(ARTIC_INCLUDE_DIRS ${HTS_INCLUDE_DIR} ${RAPIDCSV_INCLUDE_DIR} ${FLATHASHMAP} ${SHA256} ${ARTIC_INCLUDE_DIRS})
