@@ -77,17 +77,21 @@ endif()
 # pthreads
 find_package(Threads REQUIRED)
 
-# boost (dynamic bitset)
+# boost (dynamic bitset, filesystem, json)
 set(Boost_USE_STATIC_LIBS OFF) 
 set(Boost_USE_MULTITHREADED ON)  
 set(Boost_USE_STATIC_RUNTIME OFF) 
-find_package(Boost 1.45.0 COMPONENTS filesystem REQUIRED) 
+find_package(Boost 1.45.0 COMPONENTS filesystem REQUIRED)
+
+# curl
+set(CURL_LIBRARY "-lcurl") 
+find_package(CURL REQUIRED) 
 
 # zlib
 find_package(ZLIB REQUIRED)
 
 # link libraries
-set(ARTIC_LINK_LIBRARIES ZLIB::ZLIB ${Boost_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${ARTIC_LINK_LIBRARIES})
+set(ARTIC_LINK_LIBRARIES ZLIB::ZLIB ${Boost_LIBRARIES} ${CURL_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${ARTIC_LINK_LIBRARIES})
 if(CMAKE_USE_PTHREADS_INIT)
   set(ARTIC_LINK_LIBRARIES pthread ${ARTIC_LINK_LIBRARIES})
 endif()

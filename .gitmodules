@@ -19,3 +19,6 @@
 [submodule "extlibs/flat_hash_map"]
 	path = extlibs/flat_hash_map
 	url = https://github.com/skarupke/flat_hash_map
+[submodule "extlibs/PicoSHA2"]
+	path = extlibs/PicoSHA2
+	url = https://github.com/okdshin/PicoSHA2
