@@ -1,3 +1,4 @@
+#include <boost/algorithm/string/predicate.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/property_tree/ptree.hpp>
@@ -107,11 +108,11 @@ void artic::DownloadScheme(SchemeArgs& args)
         for (const auto& alias : scheme.second.get_child("aliases"))
         {
             checkedAliases.push_back(alias.second.data());
-            if (checkedAliases.back() != args.schemeName)
+            if (!boost::iequals(checkedAliases.back(), args.schemeName))
                 continue;
 
             // check available versions and get the primer_url
-            LOG_TRACE("\tfound requested scheme:\t{} (using alias {})", scheme.first, checkedAliases.back());
+            LOG_TRACE("\tfound requested scheme:\t{} (using alias {})", scheme.first, args.schemeName);
             unsigned int latestVersion = scheme.second.get<unsigned int>("latest_version");
             if (args.schemeVersion > latestVersion)
             {
@@ -131,7 +132,7 @@ void artic::DownloadScheme(SchemeArgs& args)
     if (primer_url.first.empty() || reference_url.first.empty())
     {
         LOG_WARN("\tscheme not found:\t{}", args.schemeName);
-        LOG_WARN("listing available scheme aliases", args.schemeName);
+        LOG_WARN("listing available scheme aliases (case insensitive)", args.schemeName);
         for (const auto& i : checkedAliases)
             LOG_WARN("\t- {}", i);
         throw std::runtime_error("no primer scheme available for " + args.schemeName);
