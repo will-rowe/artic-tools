@@ -116,14 +116,15 @@ void artic::VcfChecker::Run()
         }
 
         // check if in primer site
-        if (_primerScheme->CheckPrimerSite(_curRec->pos, pool))
+        // TODO: swap this logic
+        if (_primerScheme->CheckPrimerSite(_curRec->pos))
         {
             if (_dropPrimerVars)
             {
-                LOG_ERROR("\tdropping - located within a primer sequence for the primer pool ({})", pool);
+                LOG_ERROR("\tlocated within a primer sequence for the primer pool");
                 continue;
             }
-            LOG_WARN("\tlocated within a primer sequence for the primer pool ({})", pool);
+            LOG_WARN("\tlocated within a primer sequence");
         }
 
         // check amplicon overlap

@@ -124,14 +124,16 @@ TEST(primerscheme, primerSites)
 
     // check all primers are returned as being in the scheme, and check that an offset falls outside
     auto amplicons = ps.GetExpAmplicons();
-    std::cerr << "HERE" << std::endl;
-    std::cerr << amplicons.size() << std::endl;
     for (auto amplicon : amplicons)
     {
+
+        // check the forward and reverse primers are in primer sites register
         ASSERT_TRUE(ps.CheckPrimerSite(amplicon.GetForwardPrimer()->GetStart()));
-        ASSERT_FALSE(ps.CheckPrimerSite(amplicon.GetForwardPrimer()->GetStart()));
-        ASSERT_TRUE(ps.CheckPrimerSite(amplicon.GetReversePrimer()->GetEnd()));
-        ASSERT_FALSE(ps.CheckPrimerSite(amplicon.GetReversePrimer()->GetEnd() + 1));
+        ASSERT_TRUE(ps.CheckPrimerSite(amplicon.GetReversePrimer()->GetEnd() - 1));
+
+        // check the just outside the primer is not in the register
+        ASSERT_FALSE(ps.CheckPrimerSite(amplicon.GetForwardPrimer()->GetEnd()));
+        ASSERT_FALSE(ps.CheckPrimerSite(amplicon.GetReversePrimer()->GetStart() - 1));
     }
 }
 

@@ -249,13 +249,7 @@ bool artic::PrimerScheme::CheckPrimerSite(int64_t pos)
 {
     if ((_refStart > pos) || (_refEnd < pos))
         throw std::runtime_error("query position outside of primer scheme bounds");
-    for (auto poolName : _primerPools)
-    {
-        auto poolID = GetPrimerPoolID(poolName);
-        if (_primerSites.test(pos + (_refEnd * poolID)))
-            return true;
-    }
-    return false;
+    return _primerSites.test(pos);
 }
 
 // GetPrimerKmers will int encode k-mers from all primers in the scheme and deposit them in the provided map, linked to their amplicon primer origin(s).
@@ -429,6 +423,7 @@ void artic::PrimerScheme::_validateScheme(void)
     // update the min/max value of the scheme
     _refStart = _expAmplicons.front().GetForwardPrimer()->GetStart();
     _refEnd = _expAmplicons.back().GetReversePrimer()->GetEnd();
+    _primerSites.resize(_refEnd, 0);
 
     // loop through the expected amplicon list for the scheme and populate some scheme stats
     unsigned int ampliconID = 0;
@@ -454,6 +449,8 @@ void artic::PrimerScheme::_validateScheme(void)
             _minPrimerLen = fP->GetLen();
         if (fP->GetLen() > _maxPrimerLen)
             _maxPrimerLen = fP->GetLen();
+        for (auto bitSetter = fP->GetStart(); bitSetter < fP->GetEnd(); bitSetter++)
+            _primerSites[bitSetter] = 1;
 
         // check reverse primer and record sites
         auto rP = amplicon.GetReversePrimer();
@@ -461,6 +458,8 @@ void artic::PrimerScheme::_validateScheme(void)
             _minPrimerLen = rP->GetLen();
         if (rP->GetLen() > _maxPrimerLen)
             _maxPrimerLen = rP->GetLen();
+        for (auto bitSetter = rP->GetStart(); bitSetter < rP->GetEnd(); bitSetter++)
+            _primerSites[bitSetter] = 1;
 
         // add the primer sites to the lookups
         _fPrimerLocations.emplace_back(fP->GetStart(), fP->GetName());
@@ -488,29 +487,6 @@ void artic::PrimerScheme::_validateScheme(void)
         throw std::runtime_error("number of amplicons does not match number of reverse primers - " + std::to_string(_numAmplicons) + " vs " + std::to_string(_rPrimers.size()));
     if (_fPrimerLocations.size() != _rPrimerLocations.size())
         throw std::runtime_error("mismatched number of forward and reverse primer starts - " + std::to_string(_fPrimerLocations.size()) + " vs " + std::to_string(_rPrimerLocations.size()));
-
-    // store the primer sites per pool
-    _primerSites.resize(_refEnd * _primerPools.size(), 0);
-    for (size_t poolID = 0; poolID < _primerPools.size(); ++poolID)
-    {
-        for (auto const& primer : _fPrimers)
-        {
-            if (primer.second.GetPrimerPoolID() == poolID)
-            {
-
-                for (auto bitSetter = (primer.second.GetStart() + (_refEnd * poolID)); bitSetter < (primer.second.GetEnd() + (_refEnd * poolID)); bitSetter++)
-                    _primerSites[bitSetter] = 1;
-            }
-        }
-        for (auto const& primer : _rPrimers)
-        {
-            if (primer.second.GetPrimerPoolID() == poolID)
-            {
-                for (auto bitSetter = (primer.second.GetEnd() + (_refEnd * poolID)); bitSetter < (primer.second.GetStart() + (_refEnd * poolID)); bitSetter++)
-                    _primerSites[bitSetter] = 1;
-            }
-        }
-    }
 }
 
 // Amplicon constructor.
