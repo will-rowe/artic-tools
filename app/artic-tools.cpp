@@ -85,12 +85,14 @@ int main(int argc, char** argv)
 
     // add vcfFilter options and flags
     std::string vcfIn;
-    bool dropPrimerVars = false;
+    std::string vcfOut;
     bool dropOverlapFails = false;
+    float minVarQual = 10.0;
     vcfFilterCmd->add_option("vcf", vcfIn, "The input VCF file to filter")->required()->check(CLI::ExistingFile);
     vcfFilterCmd->add_option("scheme", schemeArgs.schemeFile, "The primer scheme to use")->required()->check(CLI::ExistingFile);
-    vcfFilterCmd->add_option("-o,--vcfOut", outFileName, "If provided, will write variants that pass checks");
-    vcfFilterCmd->add_flag("--dropPrimerVars", dropPrimerVars, "Will drop variants called within primer regions for the pool");
+    vcfFilterCmd->add_option("-o,--summaryOut", outFileName, "Summary of variant checks will be written here (TSV format)")->required();
+    vcfFilterCmd->add_option("--vcfOut", vcfOut, "If provided, will write variants that pass checks to this file");
+    vcfFilterCmd->add_option("-q,--minQual", minVarQual, "Minimum quality score to keep a variant (default = 10)");
     vcfFilterCmd->add_flag("--dropOverlapFails", dropOverlapFails, "Will drop variants called once within amplicon overlap regions");
 
     // add the align_trim callback
@@ -142,7 +144,7 @@ int main(int argc, char** argv)
         artic::Log::Init("check_vcf");
         LOG_TRACE("starting VCF checker");
         auto ps = artic::ValidateScheme(schemeArgs);
-        auto filter = artic::VcfChecker(&ps, vcfIn, outFileName, dropPrimerVars, dropOverlapFails);
+        auto filter = artic::VcfChecker(&ps, vcfIn, outFileName, vcfOut, dropOverlapFails, minVarQual);
         filter.Run();
     });
 

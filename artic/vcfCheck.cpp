@@ -1,13 +1,13 @@
 #include <algorithm>
-#include <iostream>
+#include <fstream>
 
 #include "log.hpp"
 #include "vcfCheck.hpp"
 #include "version.hpp"
 
 // VcfChecker constructor.
-artic::VcfChecker::VcfChecker(artic::PrimerScheme* primerScheme, const std::string& vcfIn, const std::string& vcfOut, bool dropPrimerVars, bool dropOverlapFails)
-    : _primerScheme(primerScheme), _outfileName(vcfOut), _dropPrimerVars(dropPrimerVars), _dropOverlapFails(dropOverlapFails)
+artic::VcfChecker::VcfChecker(artic::PrimerScheme* primerScheme, const std::string& vcfIn, const std::string& reportOut, const std::string& vcfOut, bool dropOverlapFails, float minQual)
+    : _primerScheme(primerScheme), _outputReportfilename(reportOut), _outputVCFfilename(vcfOut), _dropOverlapFails(dropOverlapFails), _minQual(minQual)
 {
     // get the input VCF ready
     _inputVCF = bcf_open(vcfIn.c_str(), "r");
@@ -19,6 +19,18 @@ artic::VcfChecker::VcfChecker(artic::PrimerScheme* primerScheme, const std::stri
     _curRec = bcf_init();
     _dupCheck = false;
     _recHolder = bcf_init();
+
+    // get the outputs ready
+    if (vcfOut.size() != 0)
+    {
+        _outputVCF = bcf_open(vcfOut.c_str(), "w");
+        if (!_outputVCF)
+            throw std::runtime_error("unable to open output VCF file for writing");
+        std::string progLine = "##" + PROG_NAME + "_version=" + artic::GetVersion();
+        bcf_hdr_append(_vcfHeader, progLine.c_str());
+        if (bcf_hdr_write(_outputVCF, _vcfHeader) < 0)
+            throw std::runtime_error("could not write header to output VCF stream");
+    }
 
     // zero counters
     _recordCounter = 0;
@@ -40,44 +52,82 @@ artic::VcfChecker::~VcfChecker(void)
         bcf_destroy(_recHolder);
 }
 
+// checkRecordValidity will return true if the current record passes the basic validity checks.
+bool artic::VcfChecker::_checkRecordValidity()
+{
+    // check var reference is in primer scheme
+    std::string refID = bcf_hdr_id2name(_vcfHeader, _curRec->rid);
+    if (refID != _primerScheme->GetReferenceName())
+    {
+        LOG_ERROR("\tdropping - reference ID does not match primer scheme reference ({})", refID);
+        return false;
+    }
+
+    // check var primer pool is specified and is in scheme
+    int ndst = 0;
+    char* dst = NULL;
+    bcf_get_info_string(_vcfHeader, _curRec, "Pool", &dst, &ndst);
+    if (ndst == 0)
+    {
+        LOG_ERROR("\tdropping - no pool information provided");
+        if (dst)
+            free(dst);
+        return false;
+    }
+
+    /*
+        std::string pool(dst);
+        std::vector<std::string>::iterator poolItr = std::find(primerPools.begin(), primerPools.end(), pool);
+        if (poolItr == primerPools.end())
+        {
+            LOG_ERROR("\tdropping - pool not found in scheme ({})", pool);
+            return false;
+        }
+        */
+    if (dst)
+        free(dst);
+
+    // check var position is in scheme bounds
+    if (_curRec->pos < _primerScheme->GetRefStart() || _curRec->pos > _primerScheme->GetRefEnd())
+    {
+        LOG_ERROR("\tdropping - outside of scheme bounds ({}:{})", _primerScheme->GetRefStart(), _primerScheme->GetRefEnd());
+        return false;
+    }
+    return true;
+}
+
 // Run will perform the softmasking on the open BAM file.
 void artic::VcfChecker::Run()
 {
-    LOG_TRACE("checking VCF file");
-    if ((_outfileName.size() != 0))
+    LOG_TRACE("setting parameters");
+    LOG_TRACE("\toutput report: {}", _outputReportfilename);
+    if (_outputVCF)
     {
+        LOG_TRACE("\toutput VCF: {}", _outputVCFfilename);
         LOG_TRACE("\tfiltering variants: true");
-        LOG_TRACE("\toutput file: {}", _outfileName);
+        LOG_TRACE("\tdiscard overlap fail vars: {}", _dropOverlapFails);
     }
     else
     {
-        _outputVCF = 0;
         LOG_TRACE("\tfiltering variants: false");
     }
-    LOG_TRACE("\tdiscard primer site vars: {}", _dropPrimerVars);
-    LOG_TRACE("\tdiscard overlap fail vars: {}", _dropOverlapFails);
+    LOG_TRACE("\tminimum quality threshold: {}", _minQual);
 
-    // get the output file ready if neeeded
-    if ((_outfileName.size() != 0))
-    {
-        _outputVCF = bcf_open(_outfileName.c_str(), "w");
-        if (!_outputVCF)
-            throw std::runtime_error("unable to open VCF file for writing");
-        std::string progLine = "##" + PROG_NAME + "_version=" + artic::GetVersion();
-        bcf_hdr_append(_vcfHeader, progLine.c_str());
-        if (bcf_hdr_write(_outputVCF, _vcfHeader) < 0)
-            throw std::runtime_error("could not write header to output VCF stream");
-    }
-
-    // holders
-    auto primerPools = _primerScheme->GetPrimerPools();
-    int ndst = 0;
-    char* dst = NULL;
-    std::string prevAl;
+    // vcf stats
+    int numInvalid = 0;
+    int numPrimerSeq = 0;
+    int numAmpOverlap = 0;
+    int numLowQual = 0;
 
     // iterate VCF file
+    LOG_TRACE("reading VCF file");
+    auto primerPools = _primerScheme->GetPrimerPools();
+    std::string prevAl;
+    bool qualDiscard = false;
     while (bcf_read(_inputVCF, _vcfHeader, _curRec) == 0)
     {
+
+        // unpack the record and log it
         if (_curRec->errcode)
             throw std::runtime_error("refusing to process VCF records");
         bcf_unpack(_curRec, BCF_UN_STR);
@@ -85,46 +135,26 @@ void artic::VcfChecker::Run()
         auto adjustedPos = _curRec->pos + 1;
         LOG_TRACE("variant at pos {}: {}->{}", adjustedPos, _curRec->d.allele[0], _curRec->d.allele[1]);
 
-        // check var reference is in primer scheme
-        std::string refID = bcf_hdr_id2name(_vcfHeader, _curRec->rid);
-        if (refID != _primerScheme->GetReferenceName())
+        // check the current record is valid
+        if (!_checkRecordValidity())
         {
-            LOG_ERROR("\tdropping - reference ID does not match primer scheme reference ({})", refID);
-            continue;
-        }
-
-        // check var primer pool is specified and is in scheme
-        bcf_get_info_string(_vcfHeader, _curRec, "Pool", &dst, &ndst);
-        if (ndst == 0)
-        {
-            LOG_ERROR("\tdropping - no pool information provided");
-            continue;
-        }
-        std::string pool(dst);
-        std::vector<std::string>::iterator poolItr = std::find(primerPools.begin(), primerPools.end(), pool);
-        if (poolItr == primerPools.end())
-        {
-            LOG_ERROR("\tdropping - pool not found in scheme ({})", pool);
-            continue;
-        }
-
-        // check var position is in scheme bounds
-        if (_curRec->pos < _primerScheme->GetRefStart() || _curRec->pos > _primerScheme->GetRefEnd())
-        {
-            LOG_ERROR("\tdropping - outside of scheme bounds ({}:{})", _primerScheme->GetRefStart(), _primerScheme->GetRefEnd());
+            numInvalid++;
             continue;
         }
 
         // check if in primer site
-        // TODO: swap this logic
         if (_primerScheme->CheckPrimerSite(_curRec->pos))
         {
-            if (_dropPrimerVars)
-            {
-                LOG_ERROR("\tlocated within a primer sequence for the primer pool");
-                continue;
-            }
             LOG_WARN("\tlocated within a primer sequence");
+            numPrimerSeq++;
+        }
+
+        // check quality
+        if (_curRec->qual < _minQual)
+        {
+            LOG_WARN("\tqual ({}) is below minimum quality threshold", _curRec->qual);
+            numLowQual++;
+            continue;
         }
 
         // check amplicon overlap
@@ -149,6 +179,13 @@ void artic::VcfChecker::Run()
                 bcf_empty(_recHolder);
                 _recHolder = bcf_dup(_curRec);
                 prevAl = std::string(_curRec->d.allele[1]);
+                numAmpOverlap++;
+                if (!_dropOverlapFails && _outputVCF)
+                {
+                    _keepCounter++;
+                    if (bcf_write(_outputVCF, _vcfHeader, _recHolder) < 0)
+                        throw std::runtime_error("could not write record");
+                }
                 continue;
             }
 
@@ -160,35 +197,55 @@ void artic::VcfChecker::Run()
                 bcf_empty(_recHolder);
                 _recHolder = bcf_dup(_curRec);
                 prevAl = std::string(_curRec->d.allele[1]);
+                numAmpOverlap++;
+                if (!_dropOverlapFails && _outputVCF)
+                {
+                    _keepCounter++;
+                    if (bcf_write(_outputVCF, _vcfHeader, _recHolder) < 0)
+                        throw std::runtime_error("could not write record");
+                }
                 continue;
             }
 
             // held var matches the current var, so we can write the held record, clear the holder, and let the loop progress so that the current rec is also written
             // TODO: this would be the place to merge copies as discussed at https://github.com/will-rowe/artic-tools/issues/3
             LOG_TRACE("\tmultiple copies of var found at pos {} in overlap region, keeping all copies", adjustedPos);
-            if (_outfileName.size() != 0)
+            if (_outputVCF)
                 if (bcf_write(_outputVCF, _vcfHeader, _recHolder) < 0)
                     throw std::runtime_error("could not write record");
             _keepCounter++;
             bcf_empty(_recHolder);
             _dupCheck = false;
         }
+
         _keepCounter++;
-        if (_outfileName.size() != 0)
+        if (_outputVCF)
             if (bcf_write(_outputVCF, _vcfHeader, _curRec) < 0)
                 throw std::runtime_error("could not write record");
     }
 
-    // free holders
-    if (dst)
-        free(dst);
+    // process anything left in the overlap check holder
+    if (_dupCheck)
+    {
+        LOG_ERROR("\tdropping var at pos {} which is in an amplicon overlap region but was only found once", _recHolder->pos + 1);
+        numAmpOverlap++;
+        if (!_dropOverlapFails && _outputVCF)
+        {
+            _keepCounter++;
+            if (bcf_write(_outputVCF, _vcfHeader, _recHolder) < 0)
+                throw std::runtime_error("could not write record");
+        }
+    }
+
+    // write the stats to the report file
+    std::ofstream outputReport;
+    outputReport.open(_outputReportfilename);
+    outputReport << "num. invalid vars.\tvars. in primer sites\tvars. once in amplicon overlaps\tvars. qual <" << _minQual << std::endl;
+    outputReport << numInvalid << "\t" << numPrimerSeq << "\t" << numAmpOverlap << "\t" << numLowQual << std::endl;
+    outputReport.close();
 
     // finish up
     LOG_TRACE("finished checking")
-    if (_dupCheck)
-    {
-        LOG_ERROR("\tdropped var at {} which is in an amplicon overlap region but was only found once", _recHolder->pos);
-    }
     LOG_INFO("\t{} variant records processed", _recordCounter);
     LOG_INFO("\t{} variant records passed checks", _keepCounter);
 }
