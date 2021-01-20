@@ -79,11 +79,9 @@ TEST(primerscheme, schemeAccess)
         auto poolID = pp.GetPrimerPoolID();
         auto retPoolName = ps.GetPrimerPool(poolID);
         EXPECT_EQ(retPoolName, pool1);
-
         auto pp2 = ps.FindPrimers(4046, 4450);
         auto id2 = pp2.GetName();
         auto span = pp2.GetMaxSpan();
-        std::cout << id2 << std::endl;
         ASSERT_TRUE(pp2.IsProperlyPaired());
         EXPECT_EQ(id2, std::string("nCoV-2019_14_LEFT_nCoV-2019_14_RIGHT"));
         EXPECT_EQ(ps.GetPrimerPool(pp2.GetPrimerPoolID()), pool2);
@@ -117,21 +115,23 @@ TEST(primerscheme, primerSites)
     // check out of bounds
     try
     {
-        primerSite = ps.CheckPrimerSite(0, pool1);
+        primerSite = ps.CheckPrimerSite(0);
     }
     catch (std::runtime_error& err)
     {
         EXPECT_STREQ("query position outside of primer scheme bounds", err.what());
     }
 
-    // basic check for primer sites (should detect nCoV-2019_4_LEFT)
-    for (int64_t pos = 943; pos < 1311; pos++)
+    // check all primers are returned as being in the scheme, and check that an offset falls outside
+    auto amplicons = ps.GetExpAmplicons();
+    std::cerr << "HERE" << std::endl;
+    std::cerr << amplicons.size() << std::endl;
+    for (auto amplicon : amplicons)
     {
-        primerSite = ps.CheckPrimerSite(pos, pool2);
-        if (pos < 965)
-            ASSERT_TRUE(primerSite);
-        else
-            ASSERT_FALSE(primerSite);
+        ASSERT_TRUE(ps.CheckPrimerSite(amplicon.GetForwardPrimer()->GetStart()));
+        ASSERT_FALSE(ps.CheckPrimerSite(amplicon.GetForwardPrimer()->GetStart()));
+        ASSERT_TRUE(ps.CheckPrimerSite(amplicon.GetReversePrimer()->GetEnd()));
+        ASSERT_FALSE(ps.CheckPrimerSite(amplicon.GetReversePrimer()->GetEnd() + 1));
     }
 }
 

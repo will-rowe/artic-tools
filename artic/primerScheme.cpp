@@ -242,13 +242,20 @@ bool artic::PrimerScheme::CheckAmpliconOverlap(int64_t pos)
     return _ampliconOverlaps.test(pos);
 }
 
-// CheckPrimerSite returns true if the queried position is a primer site for the given pool.
-bool artic::PrimerScheme::CheckPrimerSite(int64_t pos, const std::string& poolName)
+// CheckPrimerSite returns true if the queried position is within a primer site of the scheme (either pool).
+// TODO: this currently has primer sites stored by pools - probably not necessary as we don't use that info,
+// just the primer locations for the whole scheme.
+bool artic::PrimerScheme::CheckPrimerSite(int64_t pos)
 {
     if ((_refStart > pos) || (_refEnd < pos))
         throw std::runtime_error("query position outside of primer scheme bounds");
-    auto poolID = GetPrimerPoolID(poolName);
-    return _primerSites.test(pos + (_refEnd * poolID));
+    for (auto poolName : _primerPools)
+    {
+        auto poolID = GetPrimerPoolID(poolName);
+        if (_primerSites.test(pos + (_refEnd * poolID)))
+            return true;
+    }
+    return false;
 }
 
 // GetPrimerKmers will int encode k-mers from all primers in the scheme and deposit them in the provided map, linked to their amplicon primer origin(s).

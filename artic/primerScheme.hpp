@@ -163,8 +163,8 @@ namespace artic
         // CheckAmpliconOverlap returns true if the queried position is covered by multiple amplicons (incl. primer sequence).
         bool CheckAmpliconOverlap(int64_t pos);
 
-        // CheckPrimerSite returns true if the queried position is a primer site for the given pool.
-        bool CheckPrimerSite(int64_t pos, const std::string& poolName);
+        // CheckPrimerSite returns true if the queried position is within a primer site of the scheme (either pool).
+        bool CheckPrimerSite(int64_t pos);
 
         // GetPrimerKmers will int encode k-mers from all primers in the scheme and deposit them in the provided map, linked to their amplicon primer origin(s).
         void GetPrimerKmers(const std::string& reference, uint32_t kSize, kmermap_t& kmerMap);
