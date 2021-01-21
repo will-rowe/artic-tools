@@ -64,7 +64,7 @@ jobs:
 
       - name: Configure (windows)
         if: matrix.os == 'windows-latest'
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=${{ matrix.configuration }} -DCURL_INCLUDE_DIR=${{ DCURCL_INCLUDE_DIR }}
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=${{ matrix.configuration }} -DCURL_INCLUDE_DIR=${{ CURL_INCLUDE_DIR }}
         env:
           BOOST_ROOT: ${{steps.install-boost.outputs.BOOST_ROOT}}
           CURL_INCLUDE_DIR: ${{steps.install-curl.outputs.CURL_INCLUDE_DIR}}
