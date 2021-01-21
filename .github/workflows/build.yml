@@ -47,7 +47,6 @@ jobs:
         if: matrix.os == 'macos-clang'
 
       - name: install boost windows
-        run: sudo apt-get install libboost-all-dev -y
         if: matrix.os == 'windows-msvc'
         uses: MarkusJx/install-boost@v1.0
         id: install-boost
