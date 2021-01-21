@@ -23,23 +23,37 @@ jobs:
           - toolchain: linux-gcc
             os: ubuntu-latest
             compiler: gcc
-            boost-version: 1.58.0
 
           - toolchain: macos-clang
             os: macos-latest
             compiler: clang
-            boost-version: 1.58.0
 
           - toolchain: windows-msvc
             os: windows-latest
             compiler: msvc
-            boost-version: 1.58.0
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v2
         with:
           submodules: true
+
+      - name: install boost linux
+        run: sudo apt-get install libboost-all-dev -y
+        if: matrix.os == 'ubuntu-latest'
+
+      - name: install boost osx
+        run: brew install boost
+        if: matrix.os == 'macos-clang'
+
+      - name: install boost windows
+        run: sudo apt-get install libboost-all-dev -y
+        if: matrix.os == 'windows-msvc'
+        uses: MarkusJx/install-boost@v1.0
+        id: install-boost
+        with:
+          boost_version: 1.71.0
+          toolset: msvc14.2
 
       - name: Configure (${{ matrix.configuration }})
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=${{ matrix.configuration }}
