@@ -39,7 +39,7 @@ jobs:
           submodules: true
 
       - name: install boost-curl linux
-        run: sudo apt-get install libboost-all-dev libstdc++-7-dev -y
+        run: sudo apt-get install libboost-all-dev libcurl4-openssl-dev -y
         if: matrix.os == 'ubuntu-latest'
 
       - name: install boost-curl osx
