@@ -15,7 +15,7 @@ jobs:
         toolchain:
           - linux-gcc
           - macos-clang
-          - windows-msvc
+          #- windows-msvc
         configuration:
           - debug
         include:
@@ -25,9 +25,9 @@ jobs:
           - toolchain: macos-clang
             os: macos-latest
             compiler: clang
-          - toolchain: windows-msvc
-            os: windows-latest
-            compiler: msvc
+          #- toolchain: windows-msvc
+          #  os: windows-latest
+          #  compiler: msvc
 
     steps:
       - name: Checkout Code
@@ -43,31 +43,31 @@ jobs:
         if: matrix.os == 'macos-latest'
         run: brew install boost
 
-      - name: Install boost (windows)
-        if: matrix.os == 'windows-latest'
-        id: install-boost
-        uses: MarkusJx/install-boost@v1.0
-        with:
-          boost_version: 1.71.0
-          toolset: msvc14.2
+      #- name: Install boost (windows)
+      #  if: matrix.os == 'windows-latest'
+      #  id: install-boost
+      #  uses: MarkusJx/install-boost@v1.0
+      #  with:
+      #    boost_version: 1.71.0
+      #    toolset: msvc14.2
 
-      - name: Install curl (windows)
-        if: matrix.os == 'windows-latest'
-        run: |
-          choco install -y cygwin
-          choco install -y cyg-get
-          cyg-get curl libcurl-devel
+      #- name: Install curl (windows)
+      #  if: matrix.os == 'windows-latest'
+      #  run: |
+      #    choco install -y cygwin
+      #    choco install -y cyg-get
+      #    cyg-get curl libcurl-devel
+
+      #- name: Configure (windows)
+      #  if: matrix.os == 'windows-latest'
+      #  env:
+      #    BOOST_ROOT: ${{steps.install-boost.outputs.BOOST_ROOT}}
+      #    CURL_INCLUDE_DIR: ${{steps.install-curl.outputs.CURL_INCLUDE_DIR}}
+      #  run: cmake -S . -B build -DCMAKE_BUILD_TYPE=${{ matrix.configuration }} -DCURL_INCLUDE_DIR=$CURL_INCLUDE_DIR
 
       - name: Configure (*nix)
         if: matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest'
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=${{ matrix.configuration }}
-
-      - name: Configure (windows)
-        if: matrix.os == 'windows-latest'
-        env:
-          BOOST_ROOT: ${{steps.install-boost.outputs.BOOST_ROOT}}
-          CURL_INCLUDE_DIR: ${{steps.install-curl.outputs.CURL_INCLUDE_DIR}}
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=${{ matrix.configuration }} -DCURL_INCLUDE_DIR=$CURL_INCLUDE_DIR
 
       - name: Build with ${{ matrix.compiler }}
         run: cmake --build build
