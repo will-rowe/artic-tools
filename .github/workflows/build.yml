@@ -56,10 +56,7 @@ jobs:
 
       - name: Install curl (windows)
         if: matrix.os == 'windows-latest'
-        id: install-curl
-        uses: crazy-max/ghaction-chocolatey@v1
-        with:
-          args: install curl
+        run: pacman -S libcurl-devel --noconfirm
 
       - name: Configure (windows)
         if: matrix.os == 'windows-latest'
