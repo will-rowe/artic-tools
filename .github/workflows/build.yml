@@ -54,11 +54,15 @@ jobs:
           boost_version: 1.71.0
           toolset: msvc14.2
 
-      - name: Configure (${{ matrix.configuration }})
+      - name: Configure (windows)
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=${{ matrix.configuration }}
         if: matrix.os == 'windows-latest'
         env:
           BOOST_ROOT: ${{steps.install-boost.outputs.BOOST_ROOT}}
+
+      - name: Configure (*nix)
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=${{ matrix.configuration }}
+        if: matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest'
 
       - name: Build with ${{ matrix.compiler }}
         run: cmake --build build
