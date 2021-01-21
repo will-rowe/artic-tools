@@ -31,6 +31,7 @@ jobs:
           - toolchain: windows-msvc
             os: windows-latest
             compiler: msvc
+            shell: msys2
 
     steps:
       - name: Checkout Code
