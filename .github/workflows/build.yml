@@ -31,7 +31,6 @@ jobs:
           - toolchain: windows-msvc
             os: windows-latest
             compiler: msvc
-            shell: msys2
 
     steps:
       - name: Checkout Code
@@ -55,15 +54,15 @@ jobs:
           boost_version: 1.71.0
           toolset: msvc14.2
 
-      - name: Install msys2 (windows)
-        if: matrix.os == 'windows-latest'
-        uses: msys2/setup-msys2@v2
-        with:
-          msystem: MSYS
-
       - name: Install curl (windows)
         if: matrix.os == 'windows-latest'
-        run: pacman -S libcurl-devel --noconfirm
+        id: install-curl
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: git mingw-w64-x86_64-toolchain
+          run: pacman -S libcurl-devel --noconfirm
 
       - name: Configure (windows)
         if: matrix.os == 'windows-latest'
