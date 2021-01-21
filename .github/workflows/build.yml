@@ -72,8 +72,12 @@ jobs:
       - name: Build with ${{ matrix.compiler }}
         run: cmake --build build
 
-      - name: Test
+      - name: Unit Tests
         working-directory: build
         env:
           CTEST_OUTPUT_ON_FAILURE: 1
         run: ctest -C ${{ matrix.configuration }}
+
+      - name: Run Tests
+        working-directory: bin
+        run: ./artic-tools -v
