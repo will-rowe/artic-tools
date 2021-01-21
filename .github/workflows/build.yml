@@ -38,16 +38,16 @@ jobs:
         with:
           submodules: true
 
-      - name: install boost linux
-        run: sudo apt-get install libboost-all-dev -y
+      - name: install boost-curl linux
+        run: sudo apt-get install libboost-all-dev libstdc++-7-dev -y
         if: matrix.os == 'ubuntu-latest'
 
-      - name: install boost osx
+      - name: install boost-curl osx
         run: brew install boost
-        if: matrix.os == 'macos-clang'
+        if: matrix.os == 'macos-latest'
 
-      - name: install boost windows
-        if: matrix.os == 'windows-msvc'
+      - name: install boost-curl windows
+        if: matrix.os == 'windows-latest'
         uses: MarkusJx/install-boost@v1.0
         id: install-boost
         with:
