@@ -61,8 +61,7 @@ jobs:
         with:
           msystem: MINGW64
           update: true
-          install: git mingw-w64-x86_64-toolchain
-          run: pacman -S libcurl-devel --noconfirm
+          install: git mingw-w64-x86_64-toolchain && pacman -S libcurl-devel --noconfirm
 
       - name: Configure (windows)
         if: matrix.os == 'windows-latest'
