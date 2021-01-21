@@ -23,14 +23,17 @@ jobs:
           - toolchain: linux-gcc
             os: ubuntu-latest
             compiler: gcc
+            boost-version: 1.58.0
 
           - toolchain: macos-clang
             os: macos-latest
             compiler: clang
+            boost-version: 1.58.0
 
           - toolchain: windows-msvc
             os: windows-latest
             compiler: msvc
+            boost-version: 1.58.0
 
     steps:
       - name: Checkout Code
