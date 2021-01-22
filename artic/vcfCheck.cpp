@@ -6,8 +6,8 @@
 #include "version.hpp"
 
 // VcfChecker constructor.
-artic::VcfChecker::VcfChecker(artic::PrimerScheme* primerScheme, const std::string& vcfIn, const std::string& reportOut, const std::string& vcfOut, bool dropOverlapFails, float minQual)
-    : _primerScheme(primerScheme), _outputReportfilename(reportOut), _outputVCFfilename(vcfOut), _dropOverlapFails(dropOverlapFails), _minQual(minQual)
+artic::VcfChecker::VcfChecker(artic::PrimerScheme* primerScheme, const std::string& vcfIn, const std::string& reportOut, const std::string& vcfOut, float minQual)
+    : _primerScheme(primerScheme), _outputReportfilename(reportOut), _outputVCFfilename(vcfOut), _minQual(minQual)
 {
     // get the input VCF ready
     _inputVCF = bcf_open(vcfIn.c_str(), "r");
@@ -17,8 +17,7 @@ artic::VcfChecker::VcfChecker(artic::PrimerScheme* primerScheme, const std::stri
     if (!_vcfHeader)
         throw std::runtime_error("unable to read VCF header");
     _curRec = bcf_init();
-    _dupCheck = false;
-    _recHolder = bcf_init();
+    _prevRec = bcf_init();
 
     // get the outputs ready
     if (vcfOut.size() != 0)
@@ -35,6 +34,11 @@ artic::VcfChecker::VcfChecker(artic::PrimerScheme* primerScheme, const std::stri
     // zero counters
     _recordCounter = 0;
     _keepCounter = 0;
+    _numValid = 0;
+    _numPrimerSeq = 0;
+    _numAmpOverlap = 0;
+    _numAmpOverlapDiscard = 0;
+    _numLowQual = 0;
 }
 
 // VcfChecker destructor.
@@ -48,8 +52,8 @@ artic::VcfChecker::~VcfChecker(void)
         bcf_hdr_destroy(_vcfHeader);
     if (_curRec)
         bcf_destroy(_curRec);
-    if (_recHolder)
-        bcf_destroy(_recHolder);
+    if (_prevRec)
+        bcf_destroy(_prevRec);
 }
 
 // checkRecordValidity will return true if the current record passes the basic validity checks.
@@ -83,7 +87,8 @@ bool artic::VcfChecker::_checkRecordValidity()
             LOG_ERROR("\tdropping - pool not found in scheme ({})", pool);
             return false;
         }
-        */
+    */
+
     if (dst)
         free(dst);
 
@@ -96,6 +101,87 @@ bool artic::VcfChecker::_checkRecordValidity()
     return true;
 }
 
+//
+void artic::VcfChecker::_getRecordStats()
+{
+    // keepOverlaps is used to write to record in one pass
+    // if they are both identical vars in the same overlap pos.
+    bool keepOverlaps = false;
+
+    // evaluate if the prev record is to be kept or not
+    bcf_unpack(_prevRec, BCF_UN_STR);
+    auto adjustedPos = _prevRec->pos + 1;
+    LOG_TRACE("variant at pos {}: {}->{}", adjustedPos, _prevRec->d.allele[0], _prevRec->d.allele[1]);
+    bool discardRec = false;
+
+    // check if in primer site
+    if (_primerScheme->CheckPrimerSite(_prevRec->pos))
+    {
+        LOG_WARN("\tlocated within a primer sequence");
+        _numPrimerSeq++;
+    }
+
+    // check quality
+    if (_prevRec->qual < _minQual)
+    {
+        LOG_WARN("\tqual ({}) is below minimum quality threshold", _prevRec->qual);
+        _numLowQual++;
+        discardRec = true;
+    }
+
+    // check amplicon overlap
+    if (_primerScheme->CheckAmpliconOverlap(_prevRec->pos))
+    {
+        LOG_TRACE("\tlocated within an amplicon overlap region");
+        _numAmpOverlap++;
+        if (_prevRec->pos != _curRec->pos)
+        {
+            // check the position of the next var in the file
+            //LOG_ERROR("\tvar pos does not match with that of previously identified overlap var, holding new var (and dropping held var at {})", _prevRec->pos + 1);
+            _numAmpOverlapDiscard++;
+            discardRec = true;
+        }
+
+        else if (strcmp(_prevRec->d.allele[1], _curRec->d.allele[1]))
+        {
+            // check if the held var is the same allele
+            // TODO: this logic won't check all against all if num allele > 2
+            //LOG_ERROR("\tvar pos matches that of previously identified overlap var but alleles mismatch, holding new var (and dropping held var at {})", adjustedPos);
+            _numAmpOverlapDiscard++;
+            discardRec = true;
+        }
+
+        else
+        {
+            // held var matches the current var, so we can write the held record, clear the holder, and let the loop progress so that the current rec is also written
+            // TODO: this would be the place to merge copies as discussed at https://github.com/will-rowe/artic-tools/issues/3
+            //LOG_TRACE("\tmultiple copies of var found at pos {} in overlap region, keeping all copies", adjustedPos);
+            keepOverlaps = true;
+            _keepCounter++; // increment for one of the two records
+        }
+    }
+
+    // if the record passes all checks, keep it
+    if (!discardRec)
+    {
+        _keepCounter++;
+        if (_outputVCF)
+        {
+            if (bcf_write(_outputVCF, _vcfHeader, _prevRec) < 0)
+                throw std::runtime_error("could not write record");
+            if (keepOverlaps)
+            {
+                if (bcf_write(_outputVCF, _vcfHeader, _curRec) < 0)
+                    throw std::runtime_error("could not write record");
+            }
+        }
+    }
+
+    // update the previous record with the current record
+    bcf_empty(_prevRec);
+    _prevRec = bcf_dup(_curRec);
+}
+
 // Run will perform the softmasking on the open BAM file.
 void artic::VcfChecker::Run()
 {
@@ -103,9 +189,8 @@ void artic::VcfChecker::Run()
     LOG_TRACE("\toutput report: {}", _outputReportfilename);
     if (_outputVCF)
     {
-        LOG_TRACE("\toutput VCF: {}", _outputVCFfilename);
         LOG_TRACE("\tfiltering variants: true");
-        LOG_TRACE("\tdiscard overlap fail vars: {}", _dropOverlapFails);
+        LOG_TRACE("\toutput VCF: {}", _outputVCFfilename);
     }
     else
     {
@@ -113,17 +198,8 @@ void artic::VcfChecker::Run()
     }
     LOG_TRACE("\tminimum quality threshold: {}", _minQual);
 
-    // vcf stats
-    int numInvalid = 0;
-    int numPrimerSeq = 0;
-    int numAmpOverlap = 0;
-    int numLowQual = 0;
-
     // iterate VCF file
     LOG_TRACE("reading VCF file");
-    auto primerPools = _primerScheme->GetPrimerPools();
-    std::string prevAl;
-    bool qualDiscard = false;
     while (bcf_read(_inputVCF, _vcfHeader, _curRec) == 0)
     {
 
@@ -132,116 +208,31 @@ void artic::VcfChecker::Run()
             throw std::runtime_error("refusing to process VCF records");
         bcf_unpack(_curRec, BCF_UN_STR);
         _recordCounter++;
-        auto adjustedPos = _curRec->pos + 1;
-        LOG_TRACE("variant at pos {}: {}->{}", adjustedPos, _curRec->d.allele[0], _curRec->d.allele[1]);
 
         // check the current record is valid
         if (!_checkRecordValidity())
+            continue;
+        _numValid++;
+
+        // if this is the first record, put it in the checking holder and move to the next record
+        if (_numValid == 1)
         {
-            numInvalid++;
+            _prevRec = bcf_dup(_curRec);
             continue;
         }
 
-        // check if in primer site
-        if (_primerScheme->CheckPrimerSite(_curRec->pos))
-        {
-            LOG_WARN("\tlocated within a primer sequence");
-            numPrimerSeq++;
-        }
-
-        // check quality
-        if (_curRec->qual < _minQual)
-        {
-            LOG_WARN("\tqual ({}) is below minimum quality threshold", _curRec->qual);
-            numLowQual++;
-            continue;
-        }
-
-        // check amplicon overlap
-        if (_primerScheme->CheckAmpliconOverlap(_curRec->pos))
-        {
-            LOG_TRACE("\tlocated within an amplicon overlap region");
-
-            // check if we've already seen a var in this overlap position
-            if (!_dupCheck)
-            {
-                LOG_TRACE("\tnothing seen at position yet, holding var");
-                _recHolder = bcf_dup(_curRec);
-                _dupCheck = true;
-                prevAl = std::string(_curRec->d.allele[1]);
-                continue;
-            }
-
-            // check the held var is at the same position
-            if (_curRec->pos != _recHolder->pos)
-            {
-                LOG_ERROR("\tvar pos does not match with that of previously identified overlap var, holding new var (and dropping held var at {})", _recHolder->pos + 1);
-                bcf_empty(_recHolder);
-                _recHolder = bcf_dup(_curRec);
-                prevAl = std::string(_curRec->d.allele[1]);
-                numAmpOverlap++;
-                if (!_dropOverlapFails && _outputVCF)
-                {
-                    _keepCounter++;
-                    if (bcf_write(_outputVCF, _vcfHeader, _recHolder) < 0)
-                        throw std::runtime_error("could not write record");
-                }
-                continue;
-            }
-
-            // now check if the held var is the same allele
-            // TODO: this logic won't check all against all if num allele > 2
-            if (strcmp(_curRec->d.allele[1], prevAl.c_str()))
-            {
-                LOG_ERROR("\tvar pos matches that of previously identified overlap var but alleles mismatch, holding new var (and dropping held var at {})", adjustedPos);
-                bcf_empty(_recHolder);
-                _recHolder = bcf_dup(_curRec);
-                prevAl = std::string(_curRec->d.allele[1]);
-                numAmpOverlap++;
-                if (!_dropOverlapFails && _outputVCF)
-                {
-                    _keepCounter++;
-                    if (bcf_write(_outputVCF, _vcfHeader, _recHolder) < 0)
-                        throw std::runtime_error("could not write record");
-                }
-                continue;
-            }
-
-            // held var matches the current var, so we can write the held record, clear the holder, and let the loop progress so that the current rec is also written
-            // TODO: this would be the place to merge copies as discussed at https://github.com/will-rowe/artic-tools/issues/3
-            LOG_TRACE("\tmultiple copies of var found at pos {} in overlap region, keeping all copies", adjustedPos);
-            if (_outputVCF)
-                if (bcf_write(_outputVCF, _vcfHeader, _recHolder) < 0)
-                    throw std::runtime_error("could not write record");
-            _keepCounter++;
-            bcf_empty(_recHolder);
-            _dupCheck = false;
-        }
-
-        _keepCounter++;
-        if (_outputVCF)
-            if (bcf_write(_outputVCF, _vcfHeader, _curRec) < 0)
-                throw std::runtime_error("could not write record");
+        // get the stats
+        _getRecordStats();
     }
 
-    // process anything left in the overlap check holder
-    if (_dupCheck)
-    {
-        LOG_ERROR("\tdropping var at pos {} which is in an amplicon overlap region but was only found once", _recHolder->pos + 1);
-        numAmpOverlap++;
-        if (!_dropOverlapFails && _outputVCF)
-        {
-            _keepCounter++;
-            if (bcf_write(_outputVCF, _vcfHeader, _recHolder) < 0)
-                throw std::runtime_error("could not write record");
-        }
-    }
+    // get stats from final record
+    _getRecordStats();
 
     // write the stats to the report file
     std::ofstream outputReport;
     outputReport.open(_outputReportfilename);
-    outputReport << "num. invalid vars.\tvars. in primer sites\tvars. once in amplicon overlaps\tvars. qual <" << _minQual << std::endl;
-    outputReport << numInvalid << "\t" << numPrimerSeq << "\t" << numAmpOverlap << "\t" << numLowQual << std::endl;
+    outputReport << "total vars\tinvalid vars\tin primer sites\tin amplicon overlaps\tqual <" << _minQual << std::endl;
+    outputReport << _recordCounter << "\t" << _recordCounter - _numValid << "\t" << _numPrimerSeq << "\t" << _numAmpOverlap << "\t" << _numLowQual << std::endl;
     outputReport.close();
 
     // finish up
