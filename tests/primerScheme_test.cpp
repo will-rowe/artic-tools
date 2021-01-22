@@ -2,6 +2,7 @@
 #include <iostream>
 #include <string>
 
+#include <artic/log.hpp>
 #include <artic/primerScheme.hpp>
 using namespace artic;
 
@@ -50,16 +51,27 @@ TEST(primerscheme, constructor)
 // scheme validity
 TEST(primerscheme, validity)
 {
-    auto ps = artic::PrimerScheme(inputScheme);
-    EXPECT_EQ(ps.GetFileName(), inputScheme);
-    EXPECT_EQ(ps.GetReferenceName(), refID);
-    EXPECT_EQ(ps.GetPrimerPools().size(), numPools);
-    EXPECT_EQ(ps.GetNumPrimers(), numPrimers);
-    EXPECT_EQ(ps.GetNumAlts(), numAlts);
-    EXPECT_EQ(ps.GetMinPrimerLen(), 22);
-    EXPECT_EQ(ps.GetMaxPrimerLen(), 57);
-    EXPECT_EQ(ps.GetNumAmplicons(), numAmplicons);
-    EXPECT_EQ(ps.GetMeanAmpliconSpan(), 343);
+    artic::SchemeArgs schemeArgs;
+    schemeArgs.schemeVersion = 0;
+    schemeArgs.schemeFile = inputScheme;
+    try
+    {
+        artic::Log::Init("validate_scheme");
+        auto ps = artic::ValidateScheme(schemeArgs);
+        EXPECT_EQ(ps.GetFileName(), inputScheme);
+        EXPECT_EQ(ps.GetReferenceName(), refID);
+        EXPECT_EQ(ps.GetPrimerPools().size(), numPools);
+        EXPECT_EQ(ps.GetNumPrimers(), numPrimers);
+        EXPECT_EQ(ps.GetNumAlts(), numAlts);
+        EXPECT_EQ(ps.GetMinPrimerLen(), 22);
+        EXPECT_EQ(ps.GetMaxPrimerLen(), 57);
+        EXPECT_EQ(ps.GetNumAmplicons(), numAmplicons);
+        EXPECT_EQ(ps.GetMeanAmpliconSpan(), 343);
+    }
+    catch (...)
+    {
+        FAIL() << "failed to construct scheme";
+    }
 }
 
 // primer access

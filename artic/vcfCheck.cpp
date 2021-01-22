@@ -7,10 +7,10 @@
 
 // VcfChecker constructor.
 artic::VcfChecker::VcfChecker(artic::PrimerScheme* primerScheme, const std::string& vcfIn, const std::string& reportOut, const std::string& vcfOut, float minQual)
-    : _primerScheme(primerScheme), _outputReportfilename(reportOut), _outputVCFfilename(vcfOut), _minQual(minQual)
+    : _primerScheme(primerScheme), _inputVCFfilename(vcfIn), _outputReportfilename(reportOut), _outputVCFfilename(vcfOut), _minQual(minQual)
 {
     // get the input VCF ready
-    _inputVCF = bcf_open(vcfIn.c_str(), "r");
+    _inputVCF = bcf_open(_inputVCFfilename.c_str(), "r");
     if (!_inputVCF)
         throw std::runtime_error("unable to open VCF file for reading");
     _vcfHeader = bcf_hdr_read(_inputVCF);
@@ -29,6 +29,10 @@ artic::VcfChecker::VcfChecker(artic::PrimerScheme* primerScheme, const std::stri
         bcf_hdr_append(_vcfHeader, progLine.c_str());
         if (bcf_hdr_write(_outputVCF, _vcfHeader) < 0)
             throw std::runtime_error("could not write header to output VCF stream");
+    }
+    else
+    {
+        _outputVCF = nullptr;
     }
 
     // zero counters
@@ -231,8 +235,8 @@ void artic::VcfChecker::Run()
     // write the stats to the report file
     std::ofstream outputReport;
     outputReport.open(_outputReportfilename);
-    outputReport << "total vars\tinvalid vars\tin primer sites\tin amplicon overlaps\tqual <" << _minQual << std::endl;
-    outputReport << _recordCounter << "\t" << _recordCounter - _numValid << "\t" << _numPrimerSeq << "\t" << _numAmpOverlap << "\t" << _numLowQual << std::endl;
+    outputReport << "total vars.\tinvalid vars.\tin primer sites vars.\tin amplicon overlaps vars.\tqual <" << _minQual << " vars.\tinput VCF file" << std::endl;
+    outputReport << _recordCounter << "\t" << _recordCounter - _numValid << "\t" << _numPrimerSeq << "\t" << _numAmpOverlap << "\t" << _numLowQual << "\t" << _inputVCFfilename << std::endl;
     outputReport.close();
 
     // finish up
@@ -240,3 +244,15 @@ void artic::VcfChecker::Run()
     LOG_INFO("\t{} variant records processed", _recordCounter);
     LOG_INFO("\t{} variant records passed checks", _keepCounter);
 }
+
+// GetNumRecords returns the number of records processed by the checker.
+unsigned int artic::VcfChecker::GetNumRecords(void) const { return _recordCounter; }
+
+// GetNumInPrimerSite returns the number of records within primer sites.
+unsigned int artic::VcfChecker::GetNumInPrimerSite(void) const { return _numPrimerSeq; }
+
+// GetNumInOverlap returns the number of records within amplicon overlap regions.
+unsigned int artic::VcfChecker::GetNumInOverlap(void) const { return _numAmpOverlap; }
+
+// GetNumLowQual returns the number of records with low quality.
+unsigned int artic::VcfChecker::GetNumLowQual(void) const { return _numLowQual; }
