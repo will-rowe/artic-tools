@@ -2,6 +2,7 @@
 #include <iostream>
 #include <string>
 
+#include <artic/log.hpp>
 #include <artic/primerScheme.hpp>
 using namespace artic;
 
@@ -50,16 +51,27 @@ TEST(primerscheme, constructor)
 // scheme validity
 TEST(primerscheme, validity)
 {
-    auto ps = artic::PrimerScheme(inputScheme);
-    EXPECT_EQ(ps.GetFileName(), inputScheme);
-    EXPECT_EQ(ps.GetReferenceName(), refID);
-    EXPECT_EQ(ps.GetPrimerPools().size(), numPools);
-    EXPECT_EQ(ps.GetNumPrimers(), numPrimers);
-    EXPECT_EQ(ps.GetNumAlts(), numAlts);
-    EXPECT_EQ(ps.GetMinPrimerLen(), 22);
-    EXPECT_EQ(ps.GetMaxPrimerLen(), 57);
-    EXPECT_EQ(ps.GetNumAmplicons(), numAmplicons);
-    EXPECT_EQ(ps.GetMeanAmpliconSpan(), 343);
+    artic::SchemeArgs schemeArgs;
+    schemeArgs.schemeVersion = 0;
+    schemeArgs.schemeFile = inputScheme;
+    try
+    {
+        artic::Log::Init("validate_scheme");
+        auto ps = artic::ValidateScheme(schemeArgs);
+        EXPECT_EQ(ps.GetFileName(), inputScheme);
+        EXPECT_EQ(ps.GetReferenceName(), refID);
+        EXPECT_EQ(ps.GetPrimerPools().size(), numPools);
+        EXPECT_EQ(ps.GetNumPrimers(), numPrimers);
+        EXPECT_EQ(ps.GetNumAlts(), numAlts);
+        EXPECT_EQ(ps.GetMinPrimerLen(), 22);
+        EXPECT_EQ(ps.GetMaxPrimerLen(), 57);
+        EXPECT_EQ(ps.GetNumAmplicons(), numAmplicons);
+        EXPECT_EQ(ps.GetMeanAmpliconSpan(), 343);
+    }
+    catch (...)
+    {
+        FAIL() << "failed to construct scheme";
+    }
 }
 
 // primer access
@@ -79,11 +91,9 @@ TEST(primerscheme, schemeAccess)
         auto poolID = pp.GetPrimerPoolID();
         auto retPoolName = ps.GetPrimerPool(poolID);
         EXPECT_EQ(retPoolName, pool1);
-
         auto pp2 = ps.FindPrimers(4046, 4450);
         auto id2 = pp2.GetName();
         auto span = pp2.GetMaxSpan();
-        std::cout << id2 << std::endl;
         ASSERT_TRUE(pp2.IsProperlyPaired());
         EXPECT_EQ(id2, std::string("nCoV-2019_14_LEFT_nCoV-2019_14_RIGHT"));
         EXPECT_EQ(ps.GetPrimerPool(pp2.GetPrimerPoolID()), pool2);
@@ -117,21 +127,25 @@ TEST(primerscheme, primerSites)
     // check out of bounds
     try
     {
-        primerSite = ps.CheckPrimerSite(0, pool1);
+        primerSite = ps.CheckPrimerSite(0);
     }
     catch (std::runtime_error& err)
     {
         EXPECT_STREQ("query position outside of primer scheme bounds", err.what());
     }
 
-    // basic check for primer sites (should detect nCoV-2019_4_LEFT)
-    for (int64_t pos = 943; pos < 1311; pos++)
+    // check all primers are returned as being in the scheme, and check that an offset falls outside
+    auto amplicons = ps.GetExpAmplicons();
+    for (auto amplicon : amplicons)
     {
-        primerSite = ps.CheckPrimerSite(pos, pool2);
-        if (pos < 965)
-            ASSERT_TRUE(primerSite);
-        else
-            ASSERT_FALSE(primerSite);
+
+        // check the forward and reverse primers are in primer sites register
+        ASSERT_TRUE(ps.CheckPrimerSite(amplicon.GetForwardPrimer()->GetStart()));
+        ASSERT_TRUE(ps.CheckPrimerSite(amplicon.GetReversePrimer()->GetEnd() - 1));
+
+        // check the just outside the primer is not in the register
+        ASSERT_FALSE(ps.CheckPrimerSite(amplicon.GetForwardPrimer()->GetEnd()));
+        ASSERT_FALSE(ps.CheckPrimerSite(amplicon.GetReversePrimer()->GetStart() - 1));
     }
 }
 
