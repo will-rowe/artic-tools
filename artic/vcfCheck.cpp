@@ -229,8 +229,10 @@ void artic::VcfChecker::Run()
         _getRecordStats();
     }
 
-    // get stats from final record
-    _getRecordStats();
+    // get stats from final record, if there was one
+    if(_numValid > 0) {
+        _getRecordStats();
+    }
 
     // write the stats to the report file
     std::ofstream outputReport;
